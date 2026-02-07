@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 3,
+  "summary": "Add Phase 3: a 3D Walkthrough game mode with PUBG-style joystick movement, interactive room surfaces that open the existing Mini Sidebar, and a visible realistic 3D house.",
+  "architectural_notes": [
+    "Phase 3 introduces a 3D walkthrough mode that reuses the Phase 1 Mini Sidebar UI for interactions on 3D surfaces (walls/floors)."
+  ],
+  "known_issues": [],
+  "isFixRequest": false,
+  "existing_features": [
+    {
+      "id": "feature-ensure-the-3d-walkthrough-mode-is-fully-usable-as-the-default-3d-experience-render-a-visible-realistic-3d-house-interior-with-stable-lighting-shadows-and-materials-so-that-walls-floors-furniture-are-clearly-readable-in-dark-ui-context",
+      "title": "Ensure the 3D Walkthrough mode is fully usable as the default 3D experience: render a visible, realistic 3D house/interior with stable lighting, shadows, and materials so that walls/floors/furniture are clearly readable in dark UI context.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-ensure-pubg-style-on-screen-joystick-movement-for-3d-walkthrough-mode-joystick-must-control-forward-back-strafe-movement-smoothly-with-a-small-deadzone-and-it-must-be-available-in-3d-mode-including-non-touch-devices-while-still-supporting-existing-wasd-mouse-look-controls",
+      "title": "Add/ensure PUBG-style on-screen joystick movement for 3D Walkthrough mode: joystick must control forward/back/strafe movement smoothly with a small deadzone, and it must be available in 3D mode (including non-touch devices), while still supporting existing WASD + mouse-look controls.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-in-3d-walkthrough-mode-clicking-any-room-wall-or-floor-surface-must-open-the-same-mini-sidebar-used-elsewhere-smartroomsidebar-by-setting-the-active-room-selection-state-surface-clicks-should-select-the-correct-room-when-possible-and-otherwise-select-a-sensible-default-room",
+      "title": "In 3D Walkthrough mode, clicking any room wall or floor surface must open the same Mini Sidebar used elsewhere (SmartRoomSidebar) by setting the active room selection state; surface clicks should select the correct room when possible and otherwise select a sensible default room.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-make-the-3d-scene-data-flow-consistent-with-the-selected-active-room-device-fetching-mapped-device-hotspot-rendering-lighting-fixtures-and-navigation-bounds-must-respect-the-current-active-room-selection-and-teleport-target-not-a-hardcoded-room-id",
+      "title": "Make the 3D scene data flow consistent with the selected/active room: device fetching, mapped device hotspot rendering, lighting fixtures, and navigation bounds must respect the current active room selection (and teleport target), not a hardcoded room id.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Implement 3D Walkthrough mode (Phase 3) with a visible, realistic 3D house environment.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Add PUBG-style on-screen joystick controls for movement in 3D Walkthrough mode.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "In 3D mode, clicking any room wall or floor opens the same Mini Sidebar from Phase 1.",
+      "reqIds": [],
+      "status": "pending"
+    }
+  ],
+  "gameProjectType": "3d",
+  "projectName": "Phase 3: 3D Walkthrough mode with PUBG-style joystick and clickable room surfaces opening the Mini Sidebar",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

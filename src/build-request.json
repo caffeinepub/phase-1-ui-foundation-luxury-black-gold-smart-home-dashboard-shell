@@ -1,0 +1,94 @@
+{
+  "kind": "build_request",
+  "title": "Phase 3: 3D Walkthrough mode with PUBG-style joystick and clickable room surfaces opening the Mini Sidebar",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "text": "Ensure the 3D Walkthrough mode is fully usable as the default 3D experience: render a visible, realistic 3D house/interior with stable lighting, shadows, and materials so that walls/floors/furniture are clearly readable in dark UI context.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "Phase 3: 3D Game Mode \"Finally, add the 3D Walkthrough mode... Ensure the 3D house is visible and realistic.\""
+        ]
+      },
+      "acceptanceCriteria": [
+        "Entering the Virtual Home in 3D mode shows a complete interior (floors + walls + ceiling + furniture/decor) that is clearly visible (not black/unlit)",
+        "Shadows and lighting make depth cues apparent without overexposure; the scene remains visually stable while moving/looking around",
+        "No console errors are produced during initial render of the 3D scene"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Add/ensure PUBG-style on-screen joystick movement for 3D Walkthrough mode: joystick must control forward/back/strafe movement smoothly with a small deadzone, and it must be available in 3D mode (including non-touch devices), while still supporting existing WASD + mouse-look controls.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "Add a Joystick (PUBG-style) for movement."
+        ]
+      },
+      "acceptanceCriteria": [
+        "In 3D mode, an on-screen joystick is visible and usable to move the camera (forward/backward/left/right)",
+        "Joystick movement is smooth and has a deadzone so the camera does not drift when the stick is near center",
+        "WASD + mouse-look continue to work on desktop; joystick does not break desktop controls",
+        "When a modal/dialog is open in the 3D scene, joystick movement is disabled and resets to (0,0)"
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "In 3D Walkthrough mode, clicking any room wall or floor surface must open the same Mini Sidebar used elsewhere (SmartRoomSidebar) by setting the active room selection state; surface clicks should select the correct room when possible and otherwise select a sensible default room.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "In this mode, clicking any room wall or floor must also open the same Mini Sidebar from Phase 1."
+        ]
+      },
+      "acceptanceCriteria": [
+        "Clicking/tapping a floor or wall mesh in the 3D scene opens the existing SmartRoomSidebar UI (no new sidebar component)",
+        "A surface click updates the same room selection state used by the 2D map/room selector (activeRoomId in VirtualHome3DPage)",
+        "If the clicked surface is associated with a specific room, that room becomes active; if not determinable, a defined fallback room becomes active (documented in code)",
+        "Clicking device hotspots still opens the device dialog and does not unintentionally trigger the room sidebar selection"
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "text": "Make the 3D scene data flow consistent with the selected/active room: device fetching, mapped device hotspot rendering, lighting fixtures, and navigation bounds must respect the current active room selection (and teleport target), not a hardcoded room id.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "3D Walkthrough mode... clicking any room wall or floor must also open the same Mini Sidebar..."
+        ]
+      },
+      "acceptanceCriteria": [
+        "No device queries inside the 3D scene are hardcoded to a single room id (e.g., room 1) when a different active room is selected",
+        "When the active room changes (via room selector, 2D map selection, or 3D surface click), the 3D scene updates device hotspots/fixtures consistently with the active room (or clearly renders a defined cross-room behavior)",
+        "Navigation bounds continue to clamp movement based on activeRoomId and room-specific bounds where available"
+      ]
+    }
+  ],
+  "constraints": [
+    "Do not edit files under frontend/src/components/ui or any frontend immutablePaths listed in SYSTEM_CONTEXT.",
+    "Keep backend as a single Motoko actor; no new backend services."
+  ],
+  "nonGoals": [
+    "Adding multiplayer/real-time movement or networking.",
+    "Adding new backend persistence specifically for 3D geometry or mesh picking.",
+    "Implementing external 3D model loading pipelines (e.g., GLTF import tooling) unless already present."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

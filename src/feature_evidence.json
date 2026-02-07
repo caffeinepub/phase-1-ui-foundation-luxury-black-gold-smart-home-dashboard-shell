@@ -1,0 +1,101 @@
+{
+  "kind": "feature_evidence_report",
+  "features": [
+    {
+      "featureId": "feature-ensure-the-3d-walkthrough-mode-is-fully-usable-as-the-default-3d-experience-render-a-visible-realistic-3d-house-interior-with-stable-lighting-shadows-and-materials-so-that-walls-floors-furniture-are-clearly-readable-in-dark-ui-context",
+      "featureTitle": "Ensure the 3D Walkthrough mode is fully usable as the default 3D experience: render a visible, realistic 3D house/interior with stable lighting, shadows, and materials so that walls/floors/furniture are clearly readable in dark UI context.",
+      "files": [
+        "frontend/src/components/virtual-home/RealisticHomeModel.tsx",
+        "frontend/src/components/virtual-home/VirtualHomeScene.tsx",
+        "frontend/src/components/virtual-home/lighting/SceneLighting.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "camera@1.0.0",
+        "qr-code@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-1"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-add-ensure-pubg-style-on-screen-joystick-movement-for-3d-walkthrough-mode-joystick-must-control-forward-back-strafe-movement-smoothly-with-a-small-deadzone-and-it-must-be-available-in-3d-mode-including-non-touch-devices-while-still-supporting-existing-wasd-mouse-look-controls",
+      "featureTitle": "Add/ensure PUBG-style on-screen joystick movement for 3D Walkthrough mode: joystick must control forward/back/strafe movement smoothly with a small deadzone, and it must be available in 3D mode (including non-touch devices), while still supporting existing WASD + mouse-look controls.",
+      "files": [
+        "frontend/src/components/virtual-home/VirtualHomeScene.tsx",
+        "frontend/src/components/virtual-home/controls/VirtualJoystick.tsx",
+        "frontend/src/components/virtual-home/controls/VirtualNavigation.tsx",
+        "frontend/src/pages/VirtualHome3DPage.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "camera@1.0.0",
+        "qr-code@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-2"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-in-3d-walkthrough-mode-clicking-any-room-wall-or-floor-surface-must-open-the-same-mini-sidebar-used-elsewhere-smartroomsidebar-by-setting-the-active-room-selection-state-surface-clicks-should-select-the-correct-room-when-possible-and-otherwise-select-a-sensible-default-room",
+      "featureTitle": "In 3D Walkthrough mode, clicking any room wall or floor surface must open the same Mini Sidebar used elsewhere (SmartRoomSidebar) by setting the active room selection state; surface clicks should select the correct room when possible and otherwise select a sensible default room.",
+      "files": [
+        "frontend/src/components/virtual-home/RealisticHomeModel.tsx",
+        "frontend/src/components/virtual-home/VirtualHomeScene.tsx",
+        "frontend/src/components/virtual-home/hotspots/DeviceHotspot.tsx",
+        "frontend/src/components/virtual-home/rooms/RoomSurfacePickerLayer.tsx",
+        "frontend/src/pages/VirtualHome3DPage.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "camera@1.0.0",
+        "qr-code@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-3"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-make-the-3d-scene-data-flow-consistent-with-the-selected-active-room-device-fetching-mapped-device-hotspot-rendering-lighting-fixtures-and-navigation-bounds-must-respect-the-current-active-room-selection-and-teleport-target-not-a-hardcoded-room-id",
+      "featureTitle": "Make the 3D scene data flow consistent with the selected/active room: device fetching, mapped device hotspot rendering, lighting fixtures, and navigation bounds must respect the current active room selection (and teleport target), not a hardcoded room id.",
+      "files": [
+        "frontend/src/components/virtual-home/VirtualHomeScene.tsx",
+        "frontend/src/components/virtual-home/controls/VirtualNavigation.tsx",
+        "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/VirtualHome3DPage.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "camera@1.0.0",
+        "qr-code@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-4"
+      ],
+      "confidence": "high"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "kind": "spec_vs_diff_report",
+  "version": "1.0",
+  "generatedAt": "2026-02-07T18:13:57.942Z",
+  "summary": "Diff implements key parts of Phase 3: enhanced scene lighting/shadows, joystick deadzone + desktop mouse support, per-room navigation bounds, room-selection on scene click with documented fallback, and device hotspot click propagation control. However, room-surface picking is not true wall/floor mesh picking (it’s canvas click mapped by camera position), and the new realistic interior model is not clearly wired into the rendered 3D scene (scene still shows <BasicInterior /> in the visible snippet).",
+  "missing_requirements": [
+    {
+      "id": "REQ-3",
+      "requirement": "Clicking any room wall or floor surface must open SmartRoomSidebar by setting activeRoomId; surface clicks should select the correct room when possible and otherwise select a sensible default room.",
+      "reason": "Room selection is implemented via a DOM canvas 'click' listener and infers roomId from the camera position rather than detecting which wall/floor mesh was clicked (no raycast/intersection with wall/floor meshes is shown). This does not satisfy 'clicking any room wall or floor surface' and may also trigger on clicks that are not on surfaces.",
+      "evidence": [
+        "frontend/src/components/virtual-home/rooms/RoomSurfacePickerLayer.tsx (adds canvas click listener; selects room based on camera.position x/z rather than mesh hit testing)"
+      ]
+    },
+    {
+      "id": "REQ-1",
+      "requirement": "Render a visible, realistic 3D house/interior (floors + walls + ceiling + furniture/decor) as the default 3D experience with stable lighting/shadows/materials.",
+      "reason": "A detailed/realistic model is present in the diff, but the main scene (as shown) still renders <BasicInterior />; the diff snippet does not show the realistic interior being used as the default rendered interior in the 3D scene.",
+      "evidence": [
+        "frontend/src/components/virtual-home/VirtualHomeScene.tsx (renders <BasicInterior /> in the shown snippet)",
+        "frontend/src/components/virtual-home/RealisticHomeModel.tsx (realistic model exists but is not shown as used in the scene snippet)"
+      ]
+    }
+  ],
+  "hallucinated_features": [],
+  "confidence": 0.63,
+  "changed_files": [
+    "frontend-file-summaries.txt",
+    "frontend/src/components/virtual-home/RealisticHomeModel.tsx",
+    "frontend/src/components/virtual-home/VirtualHomeScene.tsx",
+    "frontend/src/components/virtual-home/controls/VirtualJoystick.tsx",
+    "frontend/src/components/virtual-home/controls/VirtualNavigation.tsx",
+    "frontend/src/components/virtual-home/hotspots/DeviceHotspot.tsx",
+    "frontend/src/components/virtual-home/lighting/SceneLighting.tsx",
+    "frontend/src/components/virtual-home/rooms/RoomSurfacePickerLayer.tsx",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/VirtualHome3DPage.tsx",
+    "project_state.json"
+  ]
+}

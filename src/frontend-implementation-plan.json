@@ -1,0 +1,133 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Phase 3: 3D Walkthrough usability, joystick controls, and room-surface selection",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "summary": "Make 3D Walkthrough the default-quality experience with a clearly visible, realistic interior and stable lighting/shadows/materials in the dark UI.",
+      "acceptanceCriteria": [
+        "Entering the Virtual Home in 3D mode shows a complete interior (floors + walls + ceiling + furniture/decor) that is clearly visible (not black/unlit)",
+        "Shadows and lighting make depth cues apparent without overexposure; the scene remains visually stable while moving/looking around",
+        "No console errors are produced during initial render of the 3D scene"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/virtual-home/lighting/SceneLighting.tsx",
+          "operation": "modify",
+          "description": "Tune ambient/directional/fill lighting balance and shadow settings to keep interior surfaces readable in a dark UI context while preserving depth cues (avoid overly dim or blown-out lighting)."
+        },
+        {
+          "path": "frontend/src/components/virtual-home/VirtualHomeScene.tsx",
+          "operation": "modify",
+          "description": "Harden Canvas render configuration for stable visuals (renderer settings, shadow quality tradeoffs, safe defaults) and ensure the scene initializes without console errors."
+        },
+        {
+          "path": "frontend/src/components/virtual-home/RealisticHomeModel.tsx",
+          "operation": "modify",
+          "description": "Refine interior mesh materials and shadow flags (cast/receive) so walls/floors/furniture remain visually distinct and realistic under the updated lighting."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Provide PUBG-style on-screen joystick movement in 3D mode for touch and non-touch devices with deadzone smoothing, without breaking WASD + mouse-look, and disable/reset when modals are open.",
+      "acceptanceCriteria": [
+        "In 3D mode, an on-screen joystick is visible and usable to move the camera (forward/backward/left/right)",
+        "Joystick movement is smooth and has a deadzone so the camera does not drift when the stick is near center",
+        "WASD + mouse-look continue to work on desktop; joystick does not break desktop controls",
+        "When a modal/dialog is open in the 3D scene, joystick movement is disabled and resets to (0,0)"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/virtual-home/controls/VirtualJoystick.tsx",
+          "operation": "modify",
+          "description": "Implement a joystick deadzone (emit 0,0 near center) and smooth output scaling beyond the deadzone; keep mouse and touch interactions supported; ensure disabled state always resets vector to (0,0)."
+        },
+        {
+          "path": "frontend/src/components/virtual-home/VirtualHomeScene.tsx",
+          "operation": "modify",
+          "description": "Render the on-screen joystick in 3D mode on both touch and non-touch devices; propagate a unified \"modal open\" disabled flag so joystick input is blocked and reset when dialogs (device dialog or room selector) are open."
+        },
+        {
+          "path": "frontend/src/pages/VirtualHome3DPage.tsx",
+          "operation": "modify",
+          "description": "Pass room-selector open state into the 3D scene as a modal/disabled signal so joystick movement is disabled and resets to (0,0) while the RoomSelector dialog is open."
+        },
+        {
+          "path": "frontend/src/components/virtual-home/controls/VirtualNavigation.tsx",
+          "operation": "modify",
+          "description": "Ensure joystick movement integrates smoothly with existing WASD + mouse-look (desktop) and touch-look (mobile), respecting the deadzone behavior and dialog-open movement lock."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Enable room wall/floor surface clicks in 3D to open the existing SmartRoomSidebar by updating the shared active room selection state, without interfering with device hotspots.",
+      "acceptanceCriteria": [
+        "Clicking/tapping a floor or wall mesh in the 3D scene opens the existing SmartRoomSidebar UI (no new sidebar component)",
+        "A surface click updates the same room selection state used by the 2D map/room selector (activeRoomId in VirtualHome3DPage)",
+        "If the clicked surface is associated with a specific room, that room becomes active; if not determinable, a defined fallback room becomes active (documented in code)",
+        "Clicking device hotspots still opens the device dialog and does not unintentionally trigger the room sidebar selection"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/virtual-home/rooms/RoomSurfacePickerLayer.tsx",
+          "operation": "create",
+          "description": "Create an invisible/transparent room-surface picking layer that maps pointer clicks to a roomId when possible (e.g., using room navigation bounds/regions), and falls back to a documented default room when a specific room cannot be determined."
+        },
+        {
+          "path": "frontend/src/components/virtual-home/VirtualHomeScene.tsx",
+          "operation": "modify",
+          "description": "Wire the new RoomSurfacePickerLayer into the 3D scene and add an onSurfaceSelectRoom callback that bubbles selection up to VirtualHome3DPage to set activeRoomId (opening the existing SmartRoomSidebar)."
+        },
+        {
+          "path": "frontend/src/pages/VirtualHome3DPage.tsx",
+          "operation": "modify",
+          "description": "Handle 3D surface room selection by setting activeRoomId using the same state that drives SmartRoomSidebar; ensure selection behavior is consistent with 2D map and room selector."
+        },
+        {
+          "path": "frontend/src/components/virtual-home/hotspots/DeviceHotspot.tsx",
+          "operation": "modify",
+          "description": "Prevent room-surface picking from triggering when a device hotspot is clicked (e.g., stop pointer event propagation in the hotspot click handler) so device dialog behavior remains unchanged."
+        },
+        {
+          "path": "frontend/src/components/virtual-home/RealisticHomeModel.tsx",
+          "operation": "modify",
+          "description": "If needed for more reliable wall/floor clicking, tag key wall/floor meshes for pointer interaction or ensure they do not block the picking layer; keep interaction consistent and document the fallback room choice in code comments."
+        }
+      ]
+    },
+    {
+      "id": "REQ-4",
+      "summary": "Make 3D scene data flow (devices/hotspots/fixtures/lighting and navigation bounds) respect the current active room selection rather than any hardcoded room id.",
+      "acceptanceCriteria": [
+        "No device queries inside the 3D scene are hardcoded to a single room id (e.g., room 1) when a different active room is selected",
+        "When the active room changes (via room selector, 2D map selection, or 3D surface click), the 3D scene updates device hotspots/fixtures consistently with the active room (or clearly renders a defined cross-room behavior)",
+        "Navigation bounds continue to clamp movement based on activeRoomId and room-specific bounds where available"
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Update useGetDevicesByRoom to support a nullable/optional roomId and disable querying when roomId is null, preventing accidental queries for invalid IDs while keeping existing callers working."
+        },
+        {
+          "path": "frontend/src/pages/VirtualHome3DPage.tsx",
+          "operation": "modify",
+          "description": "Stop querying devices with a hardcoded fallback (e.g., 0) when no room is active; instead, only fetch sidebar devices when activeRoomId is set, and keep the sidebar/selection behavior consistent."
+        },
+        {
+          "path": "frontend/src/components/virtual-home/VirtualHomeScene.tsx",
+          "operation": "modify",
+          "description": "Remove the hardcoded room device query and fetch devices based on activeRoomId (or a documented fallback when activeRoomId is null); ensure hotspots, fixtures, and device-driven lighting update when activeRoomId changes."
+        },
+        {
+          "path": "frontend/src/components/virtual-home/controls/VirtualNavigation.tsx",
+          "operation": "modify",
+          "description": "Confirm navigation bounds clamping uses activeRoomId consistently and remains correct after room changes/teleports, using room-specific bounds when available."
+        }
+      ]
+    }
+  ]
+}
