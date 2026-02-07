@@ -1,18 +1,30 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "New project",
-  "architectural_notes": [
-    "On first successful authentication (e.g., Internet Identity), backend should auto-provision the caller as a 'user' if not already registered, so Rooms API calls don't fail with 'Unauthorized: Must have user role'."
-  ],
-  "known_issues": [
-    "Rooms page can fail to load with 'Unauthorized: Must have user role' for newly authenticated users who are not yet registered as 'user' in backend."
-  ],
-  "isFixRequest": true,
+  "summary": "Room management UI: remove manual add-room button, show room icons based on selected room count, and navigate to a room details page with stats (usage/consumption/devices) when a room is selected.",
+  "architectural_notes": [],
+  "known_issues": [],
+  "isFixRequest": false,
   "existing_features": [
     {
-      "id": "feature-update-the-frontend-to-call-the-new-provisioning-method-once-after-successful-authentication-internet-identity-and-before-triggering-rooms-related-react-query-fetches-so-that-the-rooms-page-can-load-successfully-for-first-time-users-without-manual-retries",
-      "title": "Update the frontend to call the new provisioning method once after successful authentication (Internet Identity) and before triggering Rooms-related React Query fetches, so that the Rooms page can load successfully for first-time users without manual retries.",
+      "id": "feature-remove-the-manual-add-room-ui-and-creation-flow-from-the-rooms-page-so-rooms-are-no-longer-created-via-an-add-room-button-dialog-the-rooms-page-must-not-render-the-add-room-button-in-the-header-and-must-not-show-an-empty-state-that-prompts-creating-the-first-room",
+      "title": "Remove the manual \"Add Room\" UI and creation flow from the Rooms page so rooms are no longer created via an \"Add Room\" button/dialog. The Rooms page must not render the Add Room button in the header and must not show an empty-state that prompts creating the first room.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-rooms-page-number-of-rooms-selector-behavior-so-that-selecting-a-room-count-displays-exactly-that-many-room-icons-cards-in-the-grid-derived-from-the-pre-created-rooms-ids-1-100-the-displayed-rooms-must-be-consistent-with-the-selected-count-and-update-immediately-when-the-count-changes",
+      "title": "Update the Rooms page \"number of rooms\" selector behavior so that selecting a room count displays exactly that many room icons/cards in the grid, derived from the pre-created rooms (IDs 1–100). The displayed rooms must be consistent with the selected count and update immediately when the count changes.",
+      "reqIds": [
+        "REQ-7"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-implement-navigation-to-a-dedicated-room-details-screen-when-the-user-clicks-a-room-icon-card-in-the-rooms-grid-the-room-details-screen-must-be-a-separate-page-level-view-not-an-inline-swap-inside-the-rooms-page-and-must-show-room-details-room-statistics-room-electricity-consumption-section-and-the-room-s-devices-list-controls-reusing-existing-room-dashboard-functionality-where-applicable-include-a-back-control-to-return-to-the-rooms-page",
+      "title": "Implement navigation to a dedicated Room Details screen when the user clicks a room icon/card in the Rooms grid. The Room Details screen must be a separate page-level view (not an inline swap inside the Rooms page) and must show: room details, room statistics, room electricity/consumption section, and the room's devices list/controls (reusing existing Room Dashboard functionality where applicable). Include a Back control to return to the Rooms page.",
       "reqIds": [
         "REQ-8"
       ],
@@ -22,28 +34,24 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Auto-register/provision a new authenticated user as role 'user' on first login to prevent Rooms page Unauthorized error",
+      "summary": "Remove the 'Add Room' button; rooms should be determined by selected room count instead of manual adding.",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Add a backend flow that automatically provisions an authenticated caller with the '#user' role on first login/first use, so that newly signed-in users do not hit \"Unauthorized: Must have user role\" when loading Rooms.",
-      "reqIds": [
-        "REQ-6"
-      ],
+      "summary": "When the user selects the number of rooms, display a corresponding number of room icons/cards in the UI.",
+      "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-3",
-      "summary": "Expose a backend shared method that the frontend can call immediately after Internet Identity login to trigger user auto-provisioning (because Rooms list endpoints are query calls and cannot mutate state).",
-      "reqIds": [
-        "REQ-7"
-      ],
+      "summary": "On tapping a room icon/card, navigate to a new Room Details screen showing room details, statistics, consumption, and devices.",
+      "reqIds": [],
       "status": "pending"
     }
   ],
-  "projectName": "Auto-provision authenticated principals as 'user' role to prevent Rooms Unauthorized error",
+  "projectName": "Remove manual Add Room flow, show room icons by selected count, and add dedicated Room Details page navigation",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

@@ -116,6 +116,7 @@ export interface RoomInfo {
     name: string;
     color: string;
     isHidden: boolean;
+    isRunning: boolean;
 }
 export interface UserProfile {
     name: string;
@@ -132,9 +133,6 @@ export interface backendInterface {
     createDevice(deviceId: DeviceId, name: string, roomId: RoomId, isOn: boolean, brightness: number): Promise<void>;
     createRoom(roomId: RoomId, name: string, color: string, isHidden: boolean): Promise<void>;
     getAllDevices(): Promise<Array<[DeviceId, LightDevice]>>;
-    /**
-     * / Returns all rooms meta-data without devices list (for list-views)
-     */
     getAllRoomSummaries(): Promise<Array<RoomInfo>>;
     getAllRooms(): Promise<Array<RoomInfo>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -142,9 +140,6 @@ export interface backendInterface {
     getDevices(roomId: RoomId): Promise<Array<[DeviceId, LightDevice]>>;
     getRoomInfo(roomId: RoomId): Promise<RoomInfo | null>;
     getRoomSensorStats(roomId: RoomId): Promise<SensorStats | null>;
-    /**
-     * / Returns only a room range (support lazy loading)
-     */
     getRoomSummariesRange(fromIndex: bigint, toIndex: bigint): Promise<Array<RoomInfo>>;
     getRoomSwitchInfo(roomId: RoomId): Promise<RoomSwitchInfo | null>;
     getSupportTicket(user: Principal): Promise<SupportTicket | null>;
@@ -154,10 +149,11 @@ export interface backendInterface {
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     setBrightness(deviceId: DeviceId, brightness: number): Promise<boolean>;
     setRoomHidden(roomId: RoomId, isHidden: boolean): Promise<void>;
+    setRoomRunning(roomId: RoomId, isRunning: boolean): Promise<void>;
     submitSupportTicket(subject: string, description: string): Promise<void>;
     toggleAllDevicesInRoom(roomId: RoomId, turnOn: boolean): Promise<boolean>;
     toggleDevice(deviceId: DeviceId): Promise<boolean>;
-    toggleRoomHidden(roomId: RoomId): Promise<boolean>;
+    toggleRoomRunningState(roomId: RoomId): Promise<boolean>;
     updateRoomSettings(roomId: RoomId, name: string, color: string): Promise<void>;
 }
 import type { RoomInfo as _RoomInfo, RoomSwitchInfo as _RoomSwitchInfo, SensorStats as _SensorStats, SupportTicket as _SupportTicket, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
@@ -471,6 +467,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async setRoomRunning(arg0: RoomId, arg1: boolean): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setRoomRunning(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setRoomRunning(arg0, arg1);
+            return result;
+        }
+    }
     async submitSupportTicket(arg0: string, arg1: string): Promise<void> {
         if (this.processError) {
             try {
@@ -513,17 +523,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async toggleRoomHidden(arg0: RoomId): Promise<boolean> {
+    async toggleRoomRunningState(arg0: RoomId): Promise<boolean> {
         if (this.processError) {
             try {
-                const result = await this.actor.toggleRoomHidden(arg0);
+                const result = await this.actor.toggleRoomRunningState(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.toggleRoomHidden(arg0);
+            const result = await this.actor.toggleRoomRunningState(arg0);
             return result;
         }
     }

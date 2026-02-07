@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../ui/dialog';
 import { Switch } from '../../ui/switch';
 import { Slider } from '../../ui/slider';
 import { Label } from '../../ui/label';
 import { Lightbulb } from 'lucide-react';
 import { useToggleDevice, useSetBrightness } from '../../../hooks/useQueries';
+import { classifyAuthError } from '../../../utils/authErrors';
+import { AccessIssueCallout } from '../../security/AccessIssueCallout';
 import type { DeviceId, LightDevice } from '../../../backend';
 
 interface DeviceControlDialogProps {
@@ -16,13 +19,40 @@ interface DeviceControlDialogProps {
 export function DeviceControlDialog({ deviceId, device, open, onClose }: DeviceControlDialogProps) {
   const toggleMutation = useToggleDevice();
   const brightnessMutation = useSetBrightness();
+  const [authError, setAuthError] = useState<{ message: string; suggestRetry: boolean } | null>(null);
 
   const handleToggle = async () => {
-    await toggleMutation.mutateAsync(deviceId);
+    try {
+      setAuthError(null);
+      await toggleMutation.mutateAsync(deviceId);
+    } catch (err: any) {
+      const authErrorInfo = classifyAuthError(err);
+      if (authErrorInfo.isAuthError && authErrorInfo.suggestRetryProvisioning) {
+        setAuthError({
+          message: authErrorInfo.message,
+          suggestRetry: true,
+        });
+      }
+    }
   };
 
   const handleBrightnessChange = async (value: number[]) => {
-    await brightnessMutation.mutateAsync({ deviceId, brightness: value[0] });
+    try {
+      setAuthError(null);
+      await brightnessMutation.mutateAsync({ deviceId, brightness: value[0] });
+    } catch (err: any) {
+      const authErrorInfo = classifyAuthError(err);
+      if (authErrorInfo.isAuthError && authErrorInfo.suggestRetryProvisioning) {
+        setAuthError({
+          message: authErrorInfo.message,
+          suggestRetry: true,
+        });
+      }
+    }
+  };
+
+  const handleRetryComplete = () => {
+    setAuthError(null);
   };
 
   return (
@@ -39,6 +69,13 @@ export function DeviceControlDialog({ deviceId, device, open, onClose }: DeviceC
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {authError && authError.suggestRetry && (
+            <AccessIssueCallout
+              message={authError.message}
+              onRetryComplete={handleRetryComplete}
+            />
+          )}
+
           {/* Power Toggle */}
           <div className="flex items-center justify-between">
             <Label htmlFor="power-toggle" className="text-base">

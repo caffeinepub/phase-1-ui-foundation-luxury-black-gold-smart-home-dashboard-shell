@@ -1,74 +1,71 @@
 {
   "kind": "build_request",
-  "title": "Auto-provision authenticated principals as 'user' role to prevent Rooms Unauthorized error",
-  "priority": "high",
+  "title": "Remove manual Add Room flow, show room icons by selected count, and add dedicated Room Details page navigation",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-6",
-      "text": "Add a backend flow that automatically provisions an authenticated caller with the '#user' role on first login/first use, so that newly signed-in users do not hit \"Unauthorized: Must have user role\" when loading Rooms.",
-      "target": "backend",
+      "text": "Remove the manual \"Add Room\" UI and creation flow from the Rooms page so rooms are no longer created via an \"Add Room\" button/dialog. The Rooms page must not render the Add Room button in the header and must not show an empty-state that prompts creating the first room.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "recent-messages"
+          "msg-4"
         ],
         "quotes": [
-          "Failed to Load Rooms\nUnauthorized: Must have user role",
-          "ايوة عدلو"
+          "الغي زر اضافه غرف دي"
         ]
       },
       "acceptanceCriteria": [
-        "When a previously unseen authenticated principal interacts with the canister for the first time, the principal is granted the '#user' role automatically.",
-        "The provisioning flow must not grant roles to the anonymous principal.",
-        "Existing role assignments (including admins) continue to work unchanged.",
-        "After provisioning, calling existing user-gated endpoints (e.g., getAllRoomSummaries/getAllRooms/getAllDevices) succeeds for the new user without returning \"Unauthorized: Must have user role\"."
+        "On the Rooms page header, the \"Add Room\" button is not present.",
+        "If the backend returns zero rooms (unexpected), the UI does not present an action to create rooms; it should show a non-creating informational empty state or fallback guidance instead.",
+        "No user path in the UI triggers `CreateRoomDialog` for creating rooms from the Rooms page."
       ]
     },
     {
       "id": "REQ-7",
-      "text": "Expose a backend shared method that the frontend can call immediately after Internet Identity login to trigger user auto-provisioning (because Rooms list endpoints are query calls and cannot mutate state).",
-      "target": "backend",
+      "text": "Update the Rooms page \"number of rooms\" selector behavior so that selecting a room count displays exactly that many room icons/cards in the grid, derived from the pre-created rooms (IDs 1–100). The displayed rooms must be consistent with the selected count and update immediately when the count changes.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "recent-messages"
+          "msg-4"
         ],
         "quotes": [
-          "أول ما تدخل، الـ backend بيحتاج يسجّلك تلقائيًا كـ user."
+          "ولما احدد عدد الغرف تظهر ايقونات علي حسب العدد"
         ]
       },
       "acceptanceCriteria": [
-        "A new shared backend method exists that (1) checks whether caller already has '#user', (2) if not, grants '#user', and (3) is safe to call multiple times (idempotent).",
-        "If the caller is anonymous, the method rejects/traps with a clear Unauthorized error."
+        "Changing the room count control updates the grid to show exactly N rooms (N = selected count).",
+        "The grid shows the first N room entries (by room id) from the available pre-created rooms.",
+        "If some of the first N rooms are hidden and \"Show Hidden\" is off, the UI behavior is defined and consistent (either: include hidden rooms in the count and visually indicate hidden; or exclude hidden rooms and fill up to N with next visible rooms)."
       ]
     },
     {
       "id": "REQ-8",
-      "text": "Update the frontend to call the new provisioning method once after successful authentication (Internet Identity) and before triggering Rooms-related React Query fetches, so that the Rooms page can load successfully for first-time users without manual retries.",
+      "text": "Implement navigation to a dedicated Room Details screen when the user clicks a room icon/card in the Rooms grid. The Room Details screen must be a separate page-level view (not an inline swap inside the Rooms page) and must show: room details, room statistics, room electricity/consumption section, and the room's devices list/controls (reusing existing Room Dashboard functionality where applicable). Include a Back control to return to the Rooms page.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "recent-messages"
+          "msg-4"
         ],
         "quotes": [
-          "Fix Rooms page not opening… Unauthorized: Must have user role",
-          "ايوة"
+          "ولما ادوس علي اي غرفه تحولني لصفحه جديدة فيها تفاصيل الغرفه واحصائياتها واستهلاكها واجهزتها"
         ]
       },
       "acceptanceCriteria": [
-        "After logging in with Internet Identity, the app triggers the provisioning call once per session (or once per actor creation) and does not spam repeated calls on re-render.",
-        "Navigating to the Rooms view after first login loads the rooms list instead of showing the Unauthorized error screen.",
-        "If provisioning fails, the UI surfaces a clear error state and still allows the user to retry provisioning and then re-fetch Rooms."
+        "Clicking a room card/icon from the Rooms grid navigates to a dedicated Room Details screen.",
+        "The Room Details screen displays (at minimum) the room name and status, a statistics section, an electricity/consumption section, and a devices section (list + controls).",
+        "The Back action returns the user to the Rooms page and preserves the previously selected room count (and other relevant list UI state where feasible)."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor in backend/main.mo.",
-    "Do not modify any files under frontend/src/hooks/useActor.ts, frontend/src/hooks/useInternetIdentity.ts(x), or frontend/src/main.tsx (immutable paths).",
-    "User-facing text added/updated in the UI must be in English."
+    "Backend must remain single-actor (all Motoko logic in backend/main.mo).",
+    "Do not edit files under frontend/immutablePaths (e.g., frontend/src/hooks/useInternetIdentity.ts(x), frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui)."
   ],
   "nonGoals": [
-    "Implementing third-party authentication providers (only Internet Identity).",
-    "Adding new databases or external persistence layers.",
-    "Changing the existing admin-only restrictions for creating rooms/devices."
+    "Adding third-party authentication providers (Internet Identity only).",
+    "Adding real-time features (WebSockets/push).",
+    "Introducing external databases or services."
   ],
   "imageRequirements": {
     "required": [],

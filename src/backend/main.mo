@@ -9,6 +9,10 @@ import Runtime "mo:core/Runtime";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
 
+
+// With clause for data migration
+
+
 actor {
   // Initialize access control state
   let accessControlState = AccessControl.initState();
@@ -22,6 +26,7 @@ actor {
     name : Text;
     color : Text;
     isHidden : Bool;
+    isRunning : Bool;
   };
 
   public type LightDevice = {
@@ -59,6 +64,7 @@ actor {
     name : Text;
     color : Text;
     isHidden : Bool;
+    isRunning : Bool;
   };
 
   // Room master switch info
@@ -72,41 +78,91 @@ actor {
     activeDevices : Nat;
   };
 
-  let devices = Map.empty<DeviceId, LightDevice>();
-  let rooms = Map.empty<RoomId, Room>();
-  let sensors = Map.empty<RoomId, Sensor>();
+  // Per-user data storage
+  let userRooms = Map.empty<Principal, Map.Map<RoomId, Room>>();
+  let userDevices = Map.empty<Principal, Map.Map<DeviceId, LightDevice>>();
   let userProfiles = Map.empty<Principal, UserProfile>();
   let supportTickets = Map.empty<Principal, SupportTicket>();
+  let initializedUsers = Map.empty<Principal, Bool>();
 
   // Auto-provision user role for new authenticated principals
-  // This method allows guests to self-provision to user role on first login
   public shared ({ caller }) func initializeAccess() : async () {
-    // Only provision if caller is currently a guest
+    if (caller.isAnonymous()) {
+      Runtime.trap("Anonymous principals cannot initialize access");
+    };
+
     if (AccessControl.getUserRole(accessControlState, caller) == #guest) {
-      // Self-provision to user role
-      // Note: assignRole must allow self-provisioning for #user role
       AccessControl.assignRole(accessControlState, caller, caller, #user);
     };
-    // If already has a role, silently succeed (idempotent operation)
+
+    // Initialize default rooms for this user only if not already done
+    switch (initializedUsers.get(caller)) {
+      case (?true) { /* Already initialized */ };
+      case (_) {
+        initializeDefaultRoomsForUser(caller);
+        initializedUsers.add(caller, true);
+      };
+    };
   };
 
-  // ROOMS LAZY LOADING / PAGINATION SUPPORT
-  /// Returns all rooms meta-data without devices list (for list-views)
+  // Initialize default rooms for a specific user
+  func initializeDefaultRoomsForUser(user : Principal) {
+    let newRooms = Map.empty<RoomId, Room>();
+    for (roomId in Nat8.range(1, 101)) {
+      let newRoom : Room = {
+        id = roomId;
+        name = "Room " # roomId.toText();
+        color = "white";
+        isHidden = false;
+        isRunning = false;
+      };
+      newRooms.add(roomId, newRoom);
+    };
+    userRooms.add(user, newRooms);
+
+    // Initialize empty device map for user
+    userDevices.add(user, Map.empty<DeviceId, LightDevice>());
+  };
+
+  // Get user's rooms map
+  func getUserRoomsMap(caller : Principal) : Map.Map<RoomId, Room> {
+    switch (userRooms.get(caller)) {
+      case (?rooms) { rooms };
+      case (null) {
+        let newRooms = Map.empty<RoomId, Room>();
+        userRooms.add(caller, newRooms);
+        newRooms;
+      };
+    };
+  };
+
+  // Get user's devices map
+  func getUserDevicesMap(caller : Principal) : Map.Map<DeviceId, LightDevice> {
+    switch (userDevices.get(caller)) {
+      case (?devices) { devices };
+      case (null) {
+        let newDevices = Map.empty<DeviceId, LightDevice>();
+        userDevices.add(caller, newDevices);
+        newDevices;
+      };
+    };
+  };
+
   public query ({ caller }) func getAllRoomSummaries() : async [RoomInfo] {
     _assertUser(caller);
+    let rooms = getUserRoomsMap(caller);
     rooms.values().toArray().map<Room, RoomInfo>(
       func(r) { r }
     );
   };
 
-  /// Returns only a room range (support lazy loading)
   public query ({ caller }) func getRoomSummariesRange(fromIndex : Nat, toIndex : Nat) : async [RoomInfo] {
     _assertUser(caller);
+    let rooms = getUserRoomsMap(caller);
     let allRooms = rooms.values().toArray();
     getSlice(allRooms, fromIndex, toIndex);
   };
 
-  /// Returns only a room range (support lazy loading)
   func getSlice(arr : [Room], fromIndex : Nat, toIndex : Nat) : [RoomInfo] {
     let validatedFrom = fromIndex;
     let validatedTo = Nat.min(toIndex, arr.size());
@@ -126,30 +182,32 @@ actor {
   };
 
   public shared ({ caller }) func createRoom(roomId : RoomId, name : Text, color : Text, isHidden : Bool) : async () {
-    _assertAdmin(caller);
-    let newRoom = { id = roomId; name; color; isHidden };
+    _assertUser(caller);
+    let rooms = getUserRoomsMap(caller);
+    let newRoom = { id = roomId; name; color; isHidden; isRunning = false };
     rooms.add(roomId, newRoom);
   };
 
-  public shared ({ caller }) func toggleRoomHidden(roomId : RoomId) : async Bool {
-    _assertAdmin(caller);
+  public shared ({ caller }) func toggleRoomRunningState(roomId : RoomId) : async Bool {
+    _assertUser(caller);
+    let rooms = getUserRoomsMap(caller);
 
     switch (rooms.get(roomId)) {
       case (null) { Runtime.trap("Room not found") };
       case (?room) {
         let updatedRoom = {
           room with
-          isHidden = not room.isHidden;
+          isRunning = not room.isRunning;
         };
         rooms.add(roomId, updatedRoom);
-        updatedRoom.isHidden;
+        updatedRoom.isRunning;
       };
     };
   };
 
-  // Update existing room settings (name and color)
   public shared ({ caller }) func updateRoomSettings(roomId : RoomId, name : Text, color : Text) : async () {
-    _assertAdmin(caller);
+    _assertUser(caller);
+    let rooms = getUserRoomsMap(caller);
 
     switch (rooms.get(roomId)) {
       case (null) { Runtime.trap("Room not found") };
@@ -160,9 +218,9 @@ actor {
     };
   };
 
-  // Set room hidden entry
   public shared ({ caller }) func setRoomHidden(roomId : RoomId, isHidden : Bool) : async () {
-    _assertAdmin(caller);
+    _assertUser(caller);
+    let rooms = getUserRoomsMap(caller);
 
     switch (rooms.get(roomId)) {
       case (null) { Runtime.trap("Room not found") };
@@ -173,9 +231,22 @@ actor {
     };
   };
 
-  // Query all rooms with settings
+  public shared ({ caller }) func setRoomRunning(roomId : RoomId, isRunning : Bool) : async () {
+    _assertUser(caller);
+    let rooms = getUserRoomsMap(caller);
+
+    switch (rooms.get(roomId)) {
+      case (null) { Runtime.trap("Room not found") };
+      case (?room) {
+        let updatedRoom = { room with isRunning };
+        rooms.add(roomId, updatedRoom);
+      };
+    };
+  };
+
   public query ({ caller }) func getAllRooms() : async [RoomInfo] {
     _assertUser(caller);
+    let rooms = getUserRoomsMap(caller);
     rooms.values().toArray().map<Room, RoomInfo>(
       func(room) {
         {
@@ -183,14 +254,15 @@ actor {
           name = room.name;
           color = room.color;
           isHidden = room.isHidden;
+          isRunning = room.isRunning;
         };
       }
     );
   };
 
-  // Query specific room info with settings
   public query ({ caller }) func getRoomInfo(roomId : RoomId) : async ?RoomInfo {
     _assertUser(caller);
+    let rooms = getUserRoomsMap(caller);
 
     switch (rooms.get(roomId)) {
       case (null) { null };
@@ -200,14 +272,15 @@ actor {
           name = room.name;
           color = room.color;
           isHidden = room.isHidden;
+          isRunning = room.isRunning;
         };
       };
     };
   };
 
-  // Device management - Only Admins create devices
   public shared ({ caller }) func createDevice(deviceId : DeviceId, name : Text, roomId : RoomId, isOn : Bool, brightness : Nat8) : async () {
-    _assertAdmin(caller);
+    _assertUser(caller);
+    let devices = getUserDevicesMap(caller);
     let newDevice = {
       name;
       roomId;
@@ -217,9 +290,9 @@ actor {
     devices.add(deviceId, newDevice);
   };
 
-  // Query all devices
   public query ({ caller }) func getAllDevices() : async [(DeviceId, LightDevice)] {
     _assertUser(caller);
+    let devices = getUserDevicesMap(caller);
     devices.toArray().sort(
       func(a, b) {
         Nat8.compare(a.0, b.0);
@@ -227,18 +300,18 @@ actor {
     );
   };
 
-  // Query devices specific to a room
   public query ({ caller }) func getDevices(roomId : RoomId) : async [(DeviceId, LightDevice)] {
     _assertUser(caller);
+    let devices = getUserDevicesMap(caller);
 
     devices.filter(func(_id, device) { device.roomId == roomId }).toArray().sort(
       func(a, b) { Nat8.compare(a.0, b.0) }
     );
   };
 
-  // Individual device control
   public shared ({ caller }) func toggleDevice(deviceId : DeviceId) : async Bool {
     _assertUser(caller);
+    let devices = getUserDevicesMap(caller);
 
     switch (devices.get(deviceId)) {
       case (null) { false };
@@ -250,9 +323,9 @@ actor {
     };
   };
 
-  // Set device brightness
   public shared ({ caller }) func setBrightness(deviceId : DeviceId, brightness : Nat8) : async Bool {
     _assertUser(caller);
+    let devices = getUserDevicesMap(caller);
 
     switch (devices.get(deviceId)) {
       case (null) { false };
@@ -264,9 +337,9 @@ actor {
     };
   };
 
-  // Room Master Switch - toggle all devices in a room
   public shared ({ caller }) func toggleAllDevicesInRoom(roomId : RoomId, turnOn : Bool) : async Bool {
     _assertUser(caller);
+    let devices = getUserDevicesMap(caller);
 
     let filteredDevices = devices.filter(func(_id, device) { device.roomId == roomId });
     filteredDevices.forEach(func(deviceId, device) {
@@ -277,9 +350,10 @@ actor {
     true;
   };
 
-  // Query total/active devices in a room
   public query ({ caller }) func getRoomSwitchInfo(roomId : RoomId) : async ?RoomSwitchInfo {
     _assertUser(caller);
+    let rooms = getUserRoomsMap(caller);
+    let devices = getUserDevicesMap(caller);
 
     switch (rooms.get(roomId)) {
       case (null) { null };
@@ -295,33 +369,16 @@ actor {
     };
   };
 
-  // Environmental Sensor Management (Admin)
   public shared ({ caller }) func addOrUpdateSensors(roomId : RoomId, temperature : Float, humidity : Float) : async () {
     _assertAdmin(caller);
-    let sensor : Sensor = {
-      roomId;
-      temperature;
-      humidity;
-    };
-    sensors.add(roomId, sensor);
+    Runtime.trap("Sensor management has been moved to the frontend");
   };
 
-  // Environmental Sensor Query (User)
   public query ({ caller }) func getRoomSensorStats(roomId : RoomId) : async ?SensorStats {
     _assertUser(caller);
-
-    switch (sensors.get(roomId)) {
-      case (null) { null };
-      case (?sensor) {
-        ?{
-          temperature = sensor.temperature;
-          humidity = sensor.humidity;
-        };
-      };
-    };
+    Runtime.trap("Sensor management has been moved to the frontend");
   };
 
-  // Support Ticket Management (User)
   public shared ({ caller }) func submitSupportTicket(subject : Text, description : Text) : async () {
     _assertUser(caller);
 
@@ -335,7 +392,6 @@ actor {
     supportTickets.add(caller, newTicket);
   };
 
-  // Get support ticket (caller or admin only)
   public query ({ caller }) func getSupportTicket(user : Principal) : async ?SupportTicket {
     _assertUser(caller);
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
@@ -344,7 +400,6 @@ actor {
     supportTickets.get(user);
   };
 
-  // User profile management (User)
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     _assertUser(caller);
     userProfiles.get(caller);
@@ -362,7 +417,6 @@ actor {
     userProfiles.add(caller, profile);
   };
 
-  // Internal assertion helpers (not public/shared)
   func _assertAdmin(caller : Principal) {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
       Runtime.trap("Unauthorized: Must have admin role");

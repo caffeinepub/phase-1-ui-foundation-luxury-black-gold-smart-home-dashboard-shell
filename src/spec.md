@@ -1,12 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Prevent first-time authenticated users from seeing “Unauthorized: Must have user role” by automatically provisioning them with the `#user` role after Internet Identity login.
+**Goal:** Simplify the Rooms page by removing manual room creation, make the room grid reflect the selected room count, and add a dedicated Room Details page for room-specific information and controls.
 
 **Planned changes:**
-- Backend: auto-provision `#user` role for previously unseen authenticated principals on first interaction, without granting anything to the anonymous principal, and without affecting existing roles (including admins).
-- Backend: add a new shared, idempotent provisioning method that the frontend can call after login to ensure the caller has `#user` (reject/trap with a clear Unauthorized error for anonymous callers).
-- Frontend: call the provisioning method once after successful Internet Identity authentication and before Rooms-related React Query fetches, avoiding repeated calls on re-render.
-- Frontend: if provisioning fails, show a clear English error state with a retry action that can re-run provisioning and then re-fetch Rooms.
+- Remove the "Add Room" button and any Rooms-page flows/empty-states that prompt creating rooms; ensure no UI path from the Rooms page triggers the create-room dialog.
+- Update the room count selector so the grid shows exactly N room cards/icons based on the first N pre-created rooms (IDs 1–100), updating immediately when the selection changes (with a defined, consistent behavior when hidden rooms are involved).
+- Add page-level navigation: clicking a room card/icon opens a dedicated Room Details page that shows room details, statistics, electricity/consumption, and the room’s devices/controls (reusing existing room dashboard functionality where applicable), with a Back control returning to Rooms while preserving the selected room count where feasible.
 
-**User-visible outcome:** After logging in with Internet Identity, first-time users can open the Rooms view and load room/device lists without hitting the “Must have user role” Unauthorized error, and can retry provisioning if an error occurs.
+**User-visible outcome:** Users can choose how many rooms to display and see exactly that many room icons; selecting a room opens a full Room Details page with stats, consumption, and device controls, and they can navigate back to the Rooms list without losing their selection.

@@ -1,64 +1,72 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T18:59:15.261Z",
+  "generatedAt": "2026-02-07T20:13:43.827Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
     "total": 3,
-    "implemented": 1,
+    "implemented": 3,
     "items": [
       {
         "id": "REQ-6",
-        "summary": "Add a backend flow that automatically provisions an authenticated caller with the '#user' role on first login/first use, so that newly signed-in users do not hit \"Unauthorized: Must have user role\" when loading Rooms.",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Remove the manual \"Add Room\" UI and creation flow from the Rooms page so rooms are no longer created via an \"Add Room\" button/dialog. The Rooms page must not render the Add Room button in the header and must not show an empty-state that prompts creating the first room.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/RoomsPage.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/RoomsPage.tsx"
+        ]
       },
       {
         "id": "REQ-7",
-        "summary": "Expose a backend shared method that the frontend can call immediately after Internet Identity login to trigger user auto-provisioning (because Rooms list endpoints are query calls and cannot mutate state).",
-        "status": "unknown",
-        "plannedFiles": [],
-        "matchedFiles": []
+        "summary": "Update the Rooms page \"number of rooms\" selector behavior so that selecting a room count displays exactly that many room icons/cards in the grid, derived from the pre-created rooms (IDs 1–100). The displayed rooms must be consistent with the selected count and update immediately when the count changes.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/RoomsPage.tsx",
+          "frontend/src/utils/urlParams.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/RoomsPage.tsx",
+          "frontend/src/utils/urlParams.ts"
+        ]
       },
       {
         "id": "REQ-8",
-        "summary": "Update the frontend to call the new provisioning method once after successful authentication (Internet Identity) and before triggering Rooms-related React Query fetches, so that the Rooms page can load successfully for first-time users without manual retries.",
+        "summary": "Implement navigation to a dedicated Room Details screen when the user clicks a room icon/card in the Rooms grid. The Room Details screen must be a separate page-level view (not an inline swap inside the Rooms page) and must show: room details, room statistics, room electricity/consumption section, and the room's devices list/controls (reusing existing Room Dashboard functionality where applicable). Include a Back control to return to the Rooms page.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/backend.d.ts",
-          "frontend/src/hooks/useAutoProvisionUser.ts",
+          "frontend/src/pages/RoomDetailsPage.tsx",
           "frontend/src/hooks/useQueries.ts",
+          "frontend/src/App.tsx",
           "frontend/src/pages/RoomsPage.tsx",
-          "frontend/src/App.tsx"
+          "frontend/src/components/rooms/RoomDevicesCard.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/backend.d.ts",
-          "frontend/src/hooks/useAutoProvisionUser.ts",
+          "frontend/src/pages/RoomDetailsPage.tsx",
           "frontend/src/hooks/useQueries.ts",
+          "frontend/src/App.tsx",
           "frontend/src/pages/RoomsPage.tsx",
-          "frontend/src/App.tsx"
+          "frontend/src/components/rooms/RoomDevicesCard.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
-    "backend/main.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
     "frontend/src/App.tsx",
-    "frontend/src/backend.d.ts",
-    "frontend/src/backend.ts",
-    "frontend/src/declarations/backend.did.d.ts",
-    "frontend/src/declarations/backend.did.js",
-    "frontend/src/hooks/useAutoProvisionUser.ts",
+    "frontend/src/components/effects/GlassCard.tsx",
+    "frontend/src/components/rooms/RoomDevicesCard.tsx",
     "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/RoomDetailsPage.tsx",
     "frontend/src/pages/RoomsPage.tsx",
+    "frontend/src/utils/urlParams.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

@@ -1,4 +1,4 @@
-import { Home, Lightbulb, Power, Thermometer, Droplets, Loader2, AlertCircle } from 'lucide-react';
+import { Home, Lightbulb, Power, Zap, Loader2, AlertCircle, BarChart3 } from 'lucide-react';
 import { GlassCard } from '../effects/GlassCard';
 import { CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -10,23 +10,20 @@ import {
   useToggleDevice,
   useSetBrightness,
   useToggleAllDevicesInRoom,
-  useGetRoomSensorStats,
+  useGetRoomElectricityConsumption,
 } from '../../hooks/useQueries';
+import { BulkAddDevicesDialog } from './BulkAddDevicesDialog';
 import type { RoomInfo, DeviceId } from '../../backend';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 
 interface RoomDashboardProps {
   room: RoomInfo;
   onBack: () => void;
 }
 
-/**
- * Room-specific integrated control dashboard with comprehensive error handling for both devices and sensors,
- * retry actions, loading states, and individual device controls with glassmorphism styling.
- */
 export function RoomDashboard({ room }: RoomDashboardProps) {
   const { data: devices = [], isLoading: devicesLoading, error: devicesError, refetch: refetchDevices } = useGetDevicesByRoom(room.id);
-  const { data: sensorStats, isLoading: sensorsLoading, error: sensorsError, refetch: refetchSensors } = useGetRoomSensorStats(room.id);
+  const { data: electricityConsumption, isLoading: consumptionLoading } = useGetRoomElectricityConsumption(room.id);
   const toggleDevice = useToggleDevice();
   const setBrightness = useSetBrightness();
   const toggleAllDevices = useToggleAllDevicesInRoom();
@@ -35,6 +32,14 @@ export function RoomDashboard({ room }: RoomDashboardProps) {
 
   const allDevicesOn = devices.length > 0 && devices.every(([, device]) => device.isOn);
   const anyDeviceOn = devices.some(([, device]) => device.isOn);
+
+  // Device Statistics
+  const deviceStats = useMemo(() => {
+    const total = devices.length;
+    const devicesOn = devices.filter(([, device]) => device.isOn).length;
+    const devicesOff = total - devicesOn;
+    return { total, devicesOn, devicesOff };
+  }, [devices]);
 
   const handleToggleDevice = async (deviceId: DeviceId) => {
     try {
@@ -123,6 +128,66 @@ export function RoomDashboard({ room }: RoomDashboardProps) {
         </CardHeader>
       </GlassCard>
 
+      {/* Device Statistics */}
+      <GlassCard disableTilt>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 shadow-gold-glow-sm">
+              <BarChart3 className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Device Statistics</CardTitle>
+              <CardDescription>Overview of devices in this room</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-accent/50 border border-border">
+              <p className="text-3xl font-bold text-foreground">{deviceStats.total}</p>
+              <p className="text-sm text-muted-foreground mt-1">Total Devices</p>
+            </div>
+            <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <p className="text-3xl font-bold text-primary">{deviceStats.devicesOn}</p>
+              <p className="text-sm text-muted-foreground mt-1">Devices On</p>
+            </div>
+            <div className="flex flex-col items-center justify-center p-4 rounded-lg bg-accent/50 border border-border">
+              <p className="text-3xl font-bold text-muted-foreground">{deviceStats.devicesOff}</p>
+              <p className="text-sm text-muted-foreground mt-1">Devices Off</p>
+            </div>
+          </div>
+        </CardContent>
+      </GlassCard>
+
+      {/* Electricity Consumption */}
+      <GlassCard disableTilt>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 shadow-gold-glow-sm">
+              <Zap className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Electricity Consumption</CardTitle>
+              <CardDescription>Current energy usage for this room</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-8 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
+            {consumptionLoading ? (
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            ) : (
+              <div className="text-center">
+                <p className="text-5xl font-bold text-primary">
+                  {electricityConsumption ?? 0}
+                </p>
+                <p className="text-lg text-muted-foreground mt-2">kWh</p>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </GlassCard>
+
       {/* Master Switch */}
       <GlassCard disableTilt>
         <CardHeader>
@@ -146,26 +211,18 @@ export function RoomDashboard({ room }: RoomDashboardProps) {
                   size="sm"
                   onClick={() => handleMasterSwitch(true)}
                   disabled={toggleAllDevices.isPending || devices.length === 0}
-                  className="shadow-gold-glow-sm"
+                  className={allDevicesOn ? 'shadow-gold-glow-sm' : ''}
                 >
-                  {toggleAllDevices.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'All ON'
-                  )}
+                  All On
                 </Button>
                 <Button
                   variant={!anyDeviceOn ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => handleMasterSwitch(false)}
                   disabled={toggleAllDevices.isPending || devices.length === 0}
-                  className="shadow-gold-glow-sm"
+                  className={!anyDeviceOn ? 'shadow-gold-glow-sm' : ''}
                 >
-                  {toggleAllDevices.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    'All OFF'
-                  )}
+                  All Off
                 </Button>
               </div>
             </div>
@@ -173,144 +230,75 @@ export function RoomDashboard({ room }: RoomDashboardProps) {
         </CardHeader>
       </GlassCard>
 
-      {/* Environmental Sensors */}
-      {!sensorsLoading && sensorStats && (
-        <div className="grid gap-4 md:grid-cols-2">
-          <GlassCard disableTilt>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 shadow-gold-glow-sm">
-                  <Thermometer className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Temperature</CardTitle>
-                  <CardDescription>Current room temperature</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-foreground">
-                {sensorStats.temperature.toFixed(1)}°C
-              </div>
-            </CardContent>
-          </GlassCard>
-
-          <GlassCard disableTilt>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 shadow-gold-glow-sm">
-                  <Droplets className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Humidity</CardTitle>
-                  <CardDescription>Current room humidity</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-4xl font-bold text-foreground">
-                {sensorStats.humidity.toFixed(1)}%
-              </div>
-            </CardContent>
-          </GlassCard>
-        </div>
-      )}
-
-      {/* Sensor Error State */}
-      {sensorsError && !sensorsLoading && (
-        <GlassCard disableTilt>
-          <CardContent className="py-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-destructive" />
-                <p className="text-sm text-muted-foreground">
-                  {sensorsError instanceof Error ? sensorsError.message : 'Failed to load sensor data'}
-                </p>
-              </div>
-              <Button onClick={() => refetchSensors()} variant="outline" size="sm">
-                Retry
-              </Button>
-            </div>
-          </CardContent>
-        </GlassCard>
-      )}
+      {/* Bulk Add Devices */}
+      <div className="flex justify-end">
+        <BulkAddDevicesDialog roomId={room.id} />
+      </div>
 
       {/* Device Controls */}
-      <GlassCard disableTilt>
-        <CardHeader>
-          <CardTitle className="text-lg">Device Controls</CardTitle>
-          <CardDescription>Quick toggles for all devices in this room</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {devices.length > 0 ? (
-            <div className="space-y-4">
-              {devices.map(([deviceId, device]) => {
-                const currentBrightness =
-                  brightnessValues[deviceId] !== undefined
-                    ? brightnessValues[deviceId]
-                    : device.brightness;
-
-                return (
-                  <div
-                    key={deviceId}
-                    className="flex flex-col gap-4 rounded-lg border border-border/50 bg-background/30 p-4 backdrop-blur-sm shadow-gold-glow-sm"
-                  >
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold text-foreground">Device Controls</h3>
+        {devices.length === 0 ? (
+          <GlassCard disableTilt>
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center justify-center text-center space-y-4">
+                <Lightbulb className="h-16 w-16 text-muted-foreground" />
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">No Devices Yet</h3>
+                  <p className="mt-2 text-sm text-muted-foreground max-w-md">
+                    Add devices to this room to start controlling them.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </GlassCard>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {devices.map(([deviceId, device]) => {
+              const currentBrightness = brightnessValues[deviceId] ?? device.brightness;
+              return (
+                <GlassCard key={deviceId} disableTilt>
+                  <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                          <Lightbulb className="h-5 w-5 text-primary" />
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 shadow-gold-glow-sm">
+                          <Lightbulb className={`h-5 w-5 ${device.isOn ? 'text-primary' : 'text-muted-foreground'}`} />
                         </div>
                         <div>
-                          <p className="font-medium">{device.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {Math.round((currentBrightness / 255) * 100)}% brightness
-                          </p>
+                          <CardTitle className="text-base">{device.name}</CardTitle>
+                          <CardDescription className="text-xs">Device ID: {deviceId}</CardDescription>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <Badge variant={device.isOn ? 'default' : 'secondary'}>
-                          {device.isOn ? 'On' : 'Off'}
-                        </Badge>
-                        <Switch
-                          checked={device.isOn}
-                          onCheckedChange={() => handleToggleDevice(deviceId)}
-                          disabled={toggleDevice.isPending}
-                          className="shadow-gold-glow-sm"
-                        />
-                      </div>
+                      <Switch
+                        checked={device.isOn}
+                        onCheckedChange={() => handleToggleDevice(deviceId)}
+                        disabled={toggleDevice.isPending}
+                      />
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-sm text-muted-foreground min-w-[80px]">
-                        Brightness
-                      </span>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Brightness</span>
+                        <span className="text-sm font-medium text-foreground">{currentBrightness}%</span>
+                      </div>
                       <Slider
                         value={[currentBrightness]}
                         onValueChange={(value) => handleBrightnessChange(deviceId, value)}
                         onValueCommit={(value) => handleBrightnessCommit(deviceId, value)}
-                        max={255}
+                        max={100}
                         step={1}
                         disabled={!device.isOn || setBrightness.isPending}
-                        className="flex-1"
+                        className="w-full"
                       />
-                      <span className="text-sm font-medium min-w-[50px] text-right">
-                        {Math.round((currentBrightness / 255) * 100)}%
-                      </span>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Lightbulb className="h-12 w-12 text-muted-foreground/50 mb-3" />
-              <p className="text-sm text-muted-foreground">No devices in this room yet</p>
-              <p className="text-xs text-muted-foreground/70 mt-1">
-                Add devices to start controlling them
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </GlassCard>
+                  </CardContent>
+                </GlassCard>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

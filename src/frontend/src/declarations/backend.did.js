@@ -26,6 +26,7 @@ export const RoomInfo = IDL.Record({
   'name' : IDL.Text,
   'color' : IDL.Text,
   'isHidden' : IDL.Bool,
+  'isRunning' : IDL.Bool,
 });
 export const UserProfile = IDL.Record({ 'name' : IDL.Text });
 export const SensorStats = IDL.Record({
@@ -94,10 +95,11 @@ export const idlService = IDL.Service({
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'setBrightness' : IDL.Func([DeviceId, IDL.Nat8], [IDL.Bool], []),
   'setRoomHidden' : IDL.Func([RoomId, IDL.Bool], [], []),
+  'setRoomRunning' : IDL.Func([RoomId, IDL.Bool], [], []),
   'submitSupportTicket' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'toggleAllDevicesInRoom' : IDL.Func([RoomId, IDL.Bool], [IDL.Bool], []),
   'toggleDevice' : IDL.Func([DeviceId], [IDL.Bool], []),
-  'toggleRoomHidden' : IDL.Func([RoomId], [IDL.Bool], []),
+  'toggleRoomRunningState' : IDL.Func([RoomId], [IDL.Bool], []),
   'updateRoomSettings' : IDL.Func([RoomId, IDL.Text, IDL.Text], [], []),
 });
 
@@ -122,6 +124,7 @@ export const idlFactory = ({ IDL }) => {
     'name' : IDL.Text,
     'color' : IDL.Text,
     'isHidden' : IDL.Bool,
+    'isRunning' : IDL.Bool,
   });
   const UserProfile = IDL.Record({ 'name' : IDL.Text });
   const SensorStats = IDL.Record({
@@ -194,10 +197,11 @@ export const idlFactory = ({ IDL }) => {
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'setBrightness' : IDL.Func([DeviceId, IDL.Nat8], [IDL.Bool], []),
     'setRoomHidden' : IDL.Func([RoomId, IDL.Bool], [], []),
+    'setRoomRunning' : IDL.Func([RoomId, IDL.Bool], [], []),
     'submitSupportTicket' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'toggleAllDevicesInRoom' : IDL.Func([RoomId, IDL.Bool], [IDL.Bool], []),
     'toggleDevice' : IDL.Func([DeviceId], [IDL.Bool], []),
-    'toggleRoomHidden' : IDL.Func([RoomId], [IDL.Bool], []),
+    'toggleRoomRunningState' : IDL.Func([RoomId], [IDL.Bool], []),
     'updateRoomSettings' : IDL.Func([RoomId, IDL.Text, IDL.Text], [], []),
   });
 };

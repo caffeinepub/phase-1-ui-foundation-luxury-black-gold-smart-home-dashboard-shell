@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Settings } from 'lucide-react';
 import {
   Dialog,
@@ -14,6 +14,9 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { useUpdateRoomSettings, useSetRoomHidden } from '../../hooks/useQueries';
+import { useAutoProvisionUser } from '../../hooks/useAutoProvisionUser';
+import { classifyAuthError } from '../../utils/authErrors';
+import { AccessIssueCallout } from '../security/AccessIssueCallout';
 import type { RoomInfo } from '../../backend';
 
 interface RoomSettingsDialogProps {
@@ -26,13 +29,26 @@ export function RoomSettingsDialog({ room }: RoomSettingsDialogProps) {
   const [roomColor, setRoomColor] = useState(room.color);
   const [isHidden, setIsHidden] = useState(room.isHidden);
   const [error, setError] = useState('');
+  const [authError, setAuthError] = useState<{ message: string; suggestRetry: boolean } | null>(null);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
 
   const updateSettings = useUpdateRoomSettings();
   const setHidden = useSetRoomHidden();
+  const provisioningState = useAutoProvisionUser();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Auto-retry submission after successful provisioning
+  useEffect(() => {
+    if (pendingSubmit && provisioningState.isSuccess && !provisioningState.isLoading) {
+      setPendingSubmit(false);
+      setAuthError(null);
+      // Retry the submission
+      handleSubmitInternal();
+    }
+  }, [provisioningState.isSuccess, provisioningState.isLoading, pendingSubmit]);
+
+  const handleSubmitInternal = async () => {
     setError('');
+    setAuthError(null);
 
     // Validation
     if (!roomName.trim()) {
@@ -74,8 +90,23 @@ export function RoomSettingsDialog({ room }: RoomSettingsDialogProps) {
 
       setOpen(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to update room settings. Please try again.');
+      const authErrorInfo = classifyAuthError(err);
+      
+      if (authErrorInfo.isAuthError && authErrorInfo.suggestRetryProvisioning) {
+        setAuthError({
+          message: authErrorInfo.message,
+          suggestRetry: true,
+        });
+        setPendingSubmit(true);
+      } else {
+        setError(authErrorInfo.message || 'Failed to update room settings. Please try again.');
+      }
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleSubmitInternal();
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -85,8 +116,14 @@ export function RoomSettingsDialog({ room }: RoomSettingsDialogProps) {
       setRoomColor(room.color);
       setIsHidden(room.isHidden);
       setError('');
+      setAuthError(null);
+      setPendingSubmit(false);
     }
     setOpen(newOpen);
+  };
+
+  const handleRetryComplete = () => {
+    // Provisioning completed, form will auto-retry via useEffect
   };
 
   return (
@@ -105,6 +142,12 @@ export function RoomSettingsDialog({ room }: RoomSettingsDialogProps) {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {authError && authError.suggestRetry && (
+              <AccessIssueCallout
+                message={authError.message}
+                onRetryComplete={handleRetryComplete}
+              />
+            )}
             <div className="grid gap-2">
               <Label htmlFor="room-name">Room Name</Label>
               <Input
@@ -112,7 +155,7 @@ export function RoomSettingsDialog({ room }: RoomSettingsDialogProps) {
                 placeholder="e.g., Kitchen, Bedroom, Office"
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
-                disabled={updateSettings.isPending || setHidden.isPending}
+                disabled={updateSettings.isPending || setHidden.isPending || pendingSubmit}
               />
             </div>
             <div className="grid gap-2">
@@ -123,7 +166,7 @@ export function RoomSettingsDialog({ room }: RoomSettingsDialogProps) {
                   type="color"
                   value={roomColor}
                   onChange={(e) => setRoomColor(e.target.value)}
-                  disabled={updateSettings.isPending || setHidden.isPending}
+                  disabled={updateSettings.isPending || setHidden.isPending || pendingSubmit}
                   className="h-10 w-20 cursor-pointer"
                 />
                 <Input
@@ -131,7 +174,7 @@ export function RoomSettingsDialog({ room }: RoomSettingsDialogProps) {
                   value={roomColor}
                   onChange={(e) => setRoomColor(e.target.value)}
                   placeholder="#ffffff"
-                  disabled={updateSettings.isPending || setHidden.isPending}
+                  disabled={updateSettings.isPending || setHidden.isPending || pendingSubmit}
                   className="flex-1"
                 />
               </div>
@@ -147,26 +190,26 @@ export function RoomSettingsDialog({ room }: RoomSettingsDialogProps) {
                 id="room-hidden"
                 checked={isHidden}
                 onCheckedChange={setIsHidden}
-                disabled={updateSettings.isPending || setHidden.isPending}
+                disabled={updateSettings.isPending || setHidden.isPending || pendingSubmit}
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && !authError && <p className="text-sm text-destructive">{error}</p>}
           </div>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              disabled={updateSettings.isPending || setHidden.isPending}
+              disabled={updateSettings.isPending || setHidden.isPending || pendingSubmit}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={updateSettings.isPending || setHidden.isPending}
+              disabled={updateSettings.isPending || setHidden.isPending || pendingSubmit}
               className="shadow-gold-glow-sm"
             >
-              {updateSettings.isPending || setHidden.isPending ? 'Saving...' : 'Save Changes'}
+              {updateSettings.isPending || setHidden.isPending || pendingSubmit ? 'Saving...' : 'Save Changes'}
             </Button>
           </DialogFooter>
         </form>

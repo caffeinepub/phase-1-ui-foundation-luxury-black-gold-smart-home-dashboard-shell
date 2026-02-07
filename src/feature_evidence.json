@@ -2,12 +2,56 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-update-the-frontend-to-call-the-new-provisioning-method-once-after-successful-authentication-internet-identity-and-before-triggering-rooms-related-react-query-fetches-so-that-the-rooms-page-can-load-successfully-for-first-time-users-without-manual-retries",
-      "featureTitle": "Update the frontend to call the new provisioning method once after successful authentication (Internet Identity) and before triggering Rooms-related React Query fetches, so that the Rooms page can load successfully for first-time users without manual retries.",
+      "featureId": "feature-remove-the-manual-add-room-ui-and-creation-flow-from-the-rooms-page-so-rooms-are-no-longer-created-via-an-add-room-button-dialog-the-rooms-page-must-not-render-the-add-room-button-in-the-header-and-must-not-show-an-empty-state-that-prompts-creating-the-first-room",
+      "featureTitle": "Remove the manual \"Add Room\" UI and creation flow from the Rooms page so rooms are no longer created via an \"Add Room\" button/dialog. The Rooms page must not render the Add Room button in the header and must not show an empty-state that prompts creating the first room.",
+      "files": [
+        "frontend/src/pages/RoomsPage.tsx"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "camera@1.0.0",
+        "qr-code@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-6"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-update-the-rooms-page-number-of-rooms-selector-behavior-so-that-selecting-a-room-count-displays-exactly-that-many-room-icons-cards-in-the-grid-derived-from-the-pre-created-rooms-ids-1-100-the-displayed-rooms-must-be-consistent-with-the-selected-count-and-update-immediately-when-the-count-changes",
+      "featureTitle": "Update the Rooms page \"number of rooms\" selector behavior so that selecting a room count displays exactly that many room icons/cards in the grid, derived from the pre-created rooms (IDs 1–100). The displayed rooms must be consistent with the selected count and update immediately when the count changes.",
+      "files": [
+        "frontend/src/pages/RoomsPage.tsx",
+        "frontend/src/utils/urlParams.ts"
+      ],
+      "components": [
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0",
+        "camera@1.0.0",
+        "qr-code@1.0.0",
+        "authorization@4.0.0"
+      ],
+      "testIds": [
+        "REQ-7"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-implement-navigation-to-a-dedicated-room-details-screen-when-the-user-clicks-a-room-icon-card-in-the-rooms-grid-the-room-details-screen-must-be-a-separate-page-level-view-not-an-inline-swap-inside-the-rooms-page-and-must-show-room-details-room-statistics-room-electricity-consumption-section-and-the-room-s-devices-list-controls-reusing-existing-room-dashboard-functionality-where-applicable-include-a-back-control-to-return-to-the-rooms-page",
+      "featureTitle": "Implement navigation to a dedicated Room Details screen when the user clicks a room icon/card in the Rooms grid. The Room Details screen must be a separate page-level view (not an inline swap inside the Rooms page) and must show: room details, room statistics, room electricity/consumption section, and the room's devices list/controls (reusing existing Room Dashboard functionality where applicable). Include a Back control to return to the Rooms page.",
       "files": [
         "frontend/src/App.tsx",
-        "frontend/src/hooks/useAutoProvisionUser.ts",
+        "frontend/src/components/rooms/RoomDevicesCard.tsx",
         "frontend/src/hooks/useQueries.ts",
+        "frontend/src/pages/RoomDetailsPage.tsx",
         "frontend/src/pages/RoomsPage.tsx"
       ],
       "components": [

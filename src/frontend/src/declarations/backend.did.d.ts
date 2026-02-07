@@ -23,6 +23,7 @@ export interface RoomInfo {
   'name' : string,
   'color' : string,
   'isHidden' : boolean,
+  'isRunning' : boolean,
 }
 export interface RoomSwitchInfo {
   'totalDevices' : bigint,
@@ -49,9 +50,6 @@ export interface _SERVICE {
   >,
   'createRoom' : ActorMethod<[RoomId, string, string, boolean], undefined>,
   'getAllDevices' : ActorMethod<[], Array<[DeviceId, LightDevice]>>,
-  /**
-   * / Returns all rooms meta-data without devices list (for list-views)
-   */
   'getAllRoomSummaries' : ActorMethod<[], Array<RoomInfo>>,
   'getAllRooms' : ActorMethod<[], Array<RoomInfo>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
@@ -59,9 +57,6 @@ export interface _SERVICE {
   'getDevices' : ActorMethod<[RoomId], Array<[DeviceId, LightDevice]>>,
   'getRoomInfo' : ActorMethod<[RoomId], [] | [RoomInfo]>,
   'getRoomSensorStats' : ActorMethod<[RoomId], [] | [SensorStats]>,
-  /**
-   * / Returns only a room range (support lazy loading)
-   */
   'getRoomSummariesRange' : ActorMethod<[bigint, bigint], Array<RoomInfo>>,
   'getRoomSwitchInfo' : ActorMethod<[RoomId], [] | [RoomSwitchInfo]>,
   'getSupportTicket' : ActorMethod<[Principal], [] | [SupportTicket]>,
@@ -71,10 +66,11 @@ export interface _SERVICE {
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'setBrightness' : ActorMethod<[DeviceId, number], boolean>,
   'setRoomHidden' : ActorMethod<[RoomId, boolean], undefined>,
+  'setRoomRunning' : ActorMethod<[RoomId, boolean], undefined>,
   'submitSupportTicket' : ActorMethod<[string, string], undefined>,
   'toggleAllDevicesInRoom' : ActorMethod<[RoomId, boolean], boolean>,
   'toggleDevice' : ActorMethod<[DeviceId], boolean>,
-  'toggleRoomHidden' : ActorMethod<[RoomId], boolean>,
+  'toggleRoomRunningState' : ActorMethod<[RoomId], boolean>,
   'updateRoomSettings' : ActorMethod<[RoomId, string, string], undefined>,
 }
 export declare const idlService: IDL.ServiceClass;

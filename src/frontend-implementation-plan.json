@@ -1,41 +1,78 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Frontend auto-provisioning call after Internet Identity login to prevent Rooms unauthorized errors",
+  "title": "Rooms page cleanup, count-based room grid, and dedicated Room Details navigation",
   "requirements": [
     {
-      "id": "REQ-8",
-      "summary": "Trigger user auto-provisioning once after Internet Identity authentication and gate Rooms React Query fetches until provisioning completes, with clear retry UI on failure.",
+      "id": "REQ-6",
+      "summary": "Remove manual Add Room UI/flow from Rooms page header and empty state so users cannot create rooms from Rooms.",
       "acceptanceCriteria": [
-        "After logging in with Internet Identity, the app triggers the provisioning call once per session (or once per actor creation) and does not spam repeated calls on re-render.",
-        "Navigating to the Rooms view after first login loads the rooms list instead of showing the Unauthorized error screen.",
-        "If provisioning fails, the UI surfaces a clear error state and still allows the user to retry provisioning and then re-fetch Rooms."
+        "On the Rooms page header, the \"Add Room\" button is not present.",
+        "If the backend returns zero rooms (unexpected), the UI does not present an action to create rooms; it should show a non-creating informational empty state or fallback guidance instead.",
+        "No user path in the UI triggers `CreateRoomDialog` for creating rooms from the Rooms page."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/backend.d.ts",
+          "path": "frontend/src/pages/RoomsPage.tsx",
           "operation": "modify",
-          "description": "Update the typed backend interface to include the new backend provisioning method introduced by REQ-7 so the frontend can call it without type errors (keep naming aligned with the backend capability)."
+          "description": "Remove `CreateRoomDialog` import and all render paths that show it (header action and empty state). Replace the empty state with an informational message (no create call-to-action) and ensure no UI action on this page can open the manual room creation dialog. Continue using existing shadcn-ui primitives (Button/Card/etc.) for layout consistency; verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "summary": "Make the Rooms count selector control the grid so it shows exactly N room cards/icons derived from pre-created rooms (IDs 1–100), updating immediately on change.",
+      "acceptanceCriteria": [
+        "Changing the room count control updates the grid to show exactly N rooms (N = selected count).",
+        "The grid shows the first N room entries (by room id) from the available pre-created rooms.",
+        "If some of the first N rooms are hidden and \"Show Hidden\" is off, the UI behavior is defined and consistent (either: include hidden rooms in the count and visually indicate hidden; or exclude hidden rooms and fill up to N with next visible rooms)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/RoomsPage.tsx",
+          "operation": "modify",
+          "description": "Adjust room fetching and grid derivation so the UI always renders exactly `displayCount` room cards. Fetch the pre-created room set (up to 100) once, then deterministically sort by room id and slice to the first N for display. Define and implement consistent hidden-room behavior: when Show Hidden is OFF, exclude hidden rooms from the displayed set and fill up to N using the next non-hidden rooms by id; when ON, include hidden rooms in the count and show them with their existing Hidden badge. Ensure the grid updates immediately on slider changes (no dependence on refetch timing). Keep using the existing shadcn-ui Slider and related UI elements; verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/hooks/useAutoProvisionUser.ts",
+          "path": "frontend/src/utils/urlParams.ts",
+          "operation": "modify",
+          "description": "Add lightweight persistence for the Rooms page selected display count (and any other necessary list UI state) using sessionStorage helpers already present in this module, so the value can be restored after navigating away and back. (No routing changes required here.)"
+        }
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "summary": "Add a dedicated Room Details page-level view and navigate to it when a room card/icon is clicked; include back navigation to Rooms while preserving list state.",
+      "acceptanceCriteria": [
+        "Clicking a room card/icon from the Rooms grid navigates to a dedicated Room Details screen.",
+        "The Room Details screen displays (at minimum) the room name and status, a statistics section, an electricity/consumption section, and a devices section (list + controls).",
+        "The Back action returns the user to the Rooms page and preserves the previously selected room count (and other relevant list UI state where feasible)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/pages/RoomDetailsPage.tsx",
           "operation": "create",
-          "description": "Create a React hook that uses existing auth/actor hooks to call the new backend provisioning method exactly once per actor creation when the user is authenticated (idempotent), exposes status (idle/loading/success/error), and provides an explicit retry function for the UI. Use React Query mutation for request state and ensure it does not run for unauthenticated sessions. Use patterns from the selected 'authorization' component for handling auth state and surfacing authorization trap messages. Verify the component's usage instructions before implementing."
+          "description": "Create a dedicated Room Details page-level component that accepts a room id and renders: (1) room details (name + status), and (2) reuses existing `RoomDashboard` to show room statistics, electricity/consumption, and devices list/controls. Include a Back control that returns to the Rooms view via a callback, and ensure it does not reset the Rooms list state (rely on persisted state from session storage). Use shadcn-ui primitives (Button/Card/Badge) for consistent page structure; verify the component's usage instructions before implementing."
         },
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Add optional query-control parameters (e.g., an `enabled` override) to Rooms-related React Query hooks (starting with `useGetAllRoomSummaries`) so Rooms fetches can be deferred until provisioning succeeds, without changing immutable auth/actor hooks."
-        },
-        {
-          "path": "frontend/src/pages/RoomsPage.tsx",
-          "operation": "modify",
-          "description": "Integrate the provisioning hook to gate the rooms list query until provisioning has succeeded. If provisioning fails, show an English error state with a \"Retry setup\" action that re-runs provisioning and then triggers a rooms refetch; avoid showing the existing unauthorized error screen when the fixable provisioning failure is the cause. Use existing shadcn/ui-based UI patterns already present (Button/Card/GlassCard usage) for consistent styling. Verify the component's usage instructions before implementing."
+          "description": "Add a React Query hook to fetch a single room's info by id (using the existing backend actor typing) for the Room Details page header/details section. Keep it consistent with existing hook patterns (timeouts where appropriate, enabled guards, and stable query keys)."
         },
         {
           "path": "frontend/src/App.tsx",
           "operation": "modify",
-          "description": "Wire the provisioning hook at the app shell level (after unlock) so provisioning is triggered immediately after successful Internet Identity authentication/actor creation (before the user navigates to Rooms), while still avoiding repeated calls on re-renders."
+          "description": "Introduce an internal navigation state for the dedicated Room Details view (without adding a new sidebar nav item): extend `NavigationView` to include a room-details view, store the selected room id in App state when navigating from Rooms, render `RoomDetailsPage` for that view, and implement Back navigation to return to Rooms. Ensure that leaving/returning preserves Rooms list state (e.g., selected count restored from session)."
+        },
+        {
+          "path": "frontend/src/pages/RoomsPage.tsx",
+          "operation": "modify",
+          "description": "Remove the inline RoomDashboard swap flow (`activeRoom` state and related back UI) and instead trigger navigation to the dedicated Room Details page when a room is clicked. Update the page component signature to accept an `onOpenRoomDetails(roomId)` callback from App and call it from the grid interactions. Keep the SmartRoomSidebar behavior intact. Continue using existing shadcn-ui components; verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/rooms/RoomDevicesCard.tsx",
+          "operation": "modify",
+          "description": "Make the room card/icon itself clickable to open Room Details (not only the small action button). Wire the click to a new callback prop (e.g., `onOpenRoomDetails`) while keeping existing Start/Stop, Settings, and Create Device controls from hijacking navigation (stopPropagation as needed). Update labeling/CTA to reflect navigation to details. Uses existing shadcn-ui components; verify the component's usage instructions before implementing."
         }
       ]
     }

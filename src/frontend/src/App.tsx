@@ -7,14 +7,17 @@ import { RoomsPage } from './pages/RoomsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SupportInfoPage } from './pages/SupportInfoPage';
 import { VirtualHome3DPage } from './pages/VirtualHome3DPage';
+import { RoomDetailsPage } from './pages/RoomDetailsPage';
 import { useAutoProvisionUser } from './hooks/useAutoProvisionUser';
+import type { RoomId } from './backend';
 
-export type NavigationView = 'dashboard' | 'rooms' | 'settings' | 'support' | '3d-view';
+export type NavigationView = 'dashboard' | 'rooms' | 'settings' | 'support' | '3d-view' | 'room-details';
 
 function AppContent() {
   const { isUnlocked } = useSecurityGateway();
   const [currentView, setCurrentView] = useState<NavigationView>('dashboard');
   const [previousView, setPreviousView] = useState<NavigationView>('dashboard');
+  const [selectedRoomId, setSelectedRoomId] = useState<RoomId | null>(null);
 
   // Trigger auto-provisioning at app level after unlock
   useAutoProvisionUser();
@@ -30,12 +33,28 @@ function AppContent() {
     setCurrentView(previousView);
   };
 
+  const handleOpenRoomDetails = (roomId: RoomId) => {
+    setSelectedRoomId(roomId);
+    setCurrentView('room-details');
+  };
+
+  const handleBackToRooms = () => {
+    setSelectedRoomId(null);
+    setCurrentView('rooms');
+  };
+
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':
         return <DashboardPage onExplore3D={() => handleNavigate('3d-view')} />;
       case 'rooms':
-        return <RoomsPage />;
+        return <RoomsPage onOpenRoomDetails={handleOpenRoomDetails} />;
+      case 'room-details':
+        return selectedRoomId !== null ? (
+          <RoomDetailsPage roomId={selectedRoomId} onBack={handleBackToRooms} />
+        ) : (
+          <RoomsPage onOpenRoomDetails={handleOpenRoomDetails} />
+        );
       case 'settings':
         return <SettingsPage />;
       case 'support':
@@ -59,7 +78,7 @@ function AppContent() {
 
   // Show main app with AppShell for other views
   return (
-    <AppShell currentView={currentView} onNavigate={handleNavigate}>
+    <AppShell currentView={currentView === 'room-details' ? 'rooms' : currentView} onNavigate={handleNavigate}>
       {renderView()}
     </AppShell>
   );

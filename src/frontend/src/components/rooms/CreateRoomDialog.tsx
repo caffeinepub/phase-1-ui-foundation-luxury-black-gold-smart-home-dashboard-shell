@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus } from 'lucide-react';
 import {
   Dialog,
@@ -13,19 +13,35 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { useCreateRoom, useGetAllRooms } from '../../hooks/useQueries';
+import { useAutoProvisionUser } from '../../hooks/useAutoProvisionUser';
+import { classifyAuthError } from '../../utils/authErrors';
+import { AccessIssueCallout } from '../security/AccessIssueCallout';
 
 export function CreateRoomDialog() {
   const [open, setOpen] = useState(false);
   const [roomName, setRoomName] = useState('');
   const [roomColor, setRoomColor] = useState('#ffffff');
   const [error, setError] = useState('');
+  const [authError, setAuthError] = useState<{ message: string; suggestRetry: boolean } | null>(null);
+  const [pendingSubmit, setPendingSubmit] = useState(false);
 
   const createRoom = useCreateRoom();
   const { data: rooms = [] } = useGetAllRooms();
+  const provisioningState = useAutoProvisionUser();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Auto-retry submission after successful provisioning
+  useEffect(() => {
+    if (pendingSubmit && provisioningState.isSuccess && !provisioningState.isLoading) {
+      setPendingSubmit(false);
+      setAuthError(null);
+      // Retry the submission
+      handleSubmitInternal();
+    }
+  }, [provisioningState.isSuccess, provisioningState.isLoading, pendingSubmit]);
+
+  const handleSubmitInternal = async () => {
     setError('');
+    setAuthError(null);
 
     // Check 100-room cap
     if (rooms.length >= 100) {
@@ -81,8 +97,23 @@ export function CreateRoomDialog() {
       setRoomColor('#ffffff');
       setOpen(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to create room. Please try again.');
+      const authErrorInfo = classifyAuthError(err);
+      
+      if (authErrorInfo.isAuthError && authErrorInfo.suggestRetryProvisioning) {
+        setAuthError({
+          message: authErrorInfo.message,
+          suggestRetry: true,
+        });
+        setPendingSubmit(true);
+      } else {
+        setError(authErrorInfo.message || 'Failed to create room. Please try again.');
+      }
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleSubmitInternal();
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -90,8 +121,14 @@ export function CreateRoomDialog() {
       setRoomName('');
       setRoomColor('#ffffff');
       setError('');
+      setAuthError(null);
+      setPendingSubmit(false);
     }
     setOpen(newOpen);
+  };
+
+  const handleRetryComplete = () => {
+    // Provisioning completed, form will auto-retry via useEffect
   };
 
   return (
@@ -111,6 +148,12 @@ export function CreateRoomDialog() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            {authError && authError.suggestRetry && (
+              <AccessIssueCallout
+                message={authError.message}
+                onRetryComplete={handleRetryComplete}
+              />
+            )}
             <div className="grid gap-2">
               <Label htmlFor="room-name">Room Name</Label>
               <Input
@@ -118,7 +161,7 @@ export function CreateRoomDialog() {
                 placeholder="e.g., Kitchen, Bedroom, Office"
                 value={roomName}
                 onChange={(e) => setRoomName(e.target.value)}
-                disabled={createRoom.isPending}
+                disabled={createRoom.isPending || pendingSubmit}
               />
             </div>
             <div className="grid gap-2">
@@ -129,7 +172,7 @@ export function CreateRoomDialog() {
                   type="color"
                   value={roomColor}
                   onChange={(e) => setRoomColor(e.target.value)}
-                  disabled={createRoom.isPending}
+                  disabled={createRoom.isPending || pendingSubmit}
                   className="h-10 w-20 cursor-pointer"
                 />
                 <Input
@@ -137,28 +180,28 @@ export function CreateRoomDialog() {
                   value={roomColor}
                   onChange={(e) => setRoomColor(e.target.value)}
                   placeholder="#ffffff"
-                  disabled={createRoom.isPending}
+                  disabled={createRoom.isPending || pendingSubmit}
                   className="flex-1"
                 />
               </div>
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && !authError && <p className="text-sm text-destructive">{error}</p>}
           </div>
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => setOpen(false)}
-              disabled={createRoom.isPending}
+              disabled={createRoom.isPending || pendingSubmit}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={createRoom.isPending || rooms.length >= 100}
+              disabled={createRoom.isPending || pendingSubmit}
               className="shadow-gold-glow-sm"
             >
-              {createRoom.isPending ? 'Creating...' : 'Create Room'}
+              {createRoom.isPending || pendingSubmit ? 'Creating...' : 'Create Room'}
             </Button>
           </DialogFooter>
         </form>

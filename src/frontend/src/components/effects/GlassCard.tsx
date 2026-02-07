@@ -7,11 +7,12 @@ interface GlassCardProps {
   children: ReactNode;
   className?: string;
   disableTilt?: boolean;
+  onClick?: () => void;
 }
 
-export function GlassCard({ children, className, disableTilt = false }: GlassCardProps) {
+export function GlassCard({ children, className, disableTilt = false, onClick }: GlassCardProps) {
   const cardContent = (
-    <Card className={cn('glass-surface', className)}>
+    <Card className={cn('glass-surface', className)} onClick={onClick}>
       {children}
     </Card>
   );
