@@ -1,4 +1,4 @@
-import { Home, Lightbulb, Power, Thermometer, Droplets, Loader2 } from 'lucide-react';
+import { Home, Lightbulb, Power, Thermometer, Droplets, Loader2, AlertCircle } from 'lucide-react';
 import { GlassCard } from '../effects/GlassCard';
 import { CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -12,7 +12,7 @@ import {
   useToggleAllDevicesInRoom,
   useGetRoomSensorStats,
 } from '../../hooks/useQueries';
-import type { RoomInfo, DeviceId, LightDevice } from '../../backend';
+import type { RoomInfo, DeviceId } from '../../backend';
 import { useState } from 'react';
 
 interface RoomDashboardProps {
@@ -20,9 +20,13 @@ interface RoomDashboardProps {
   onBack: () => void;
 }
 
+/**
+ * Room-specific integrated control dashboard with comprehensive error handling for both devices and sensors,
+ * retry actions, loading states, and individual device controls with glassmorphism styling.
+ */
 export function RoomDashboard({ room }: RoomDashboardProps) {
-  const { data: devices = [], isLoading: devicesLoading } = useGetDevicesByRoom(room.id);
-  const { data: sensorStats, isLoading: sensorsLoading } = useGetRoomSensorStats(room.id);
+  const { data: devices = [], isLoading: devicesLoading, error: devicesError, refetch: refetchDevices } = useGetDevicesByRoom(room.id);
+  const { data: sensorStats, isLoading: sensorsLoading, error: sensorsError, refetch: refetchSensors } = useGetRoomSensorStats(room.id);
   const toggleDevice = useToggleDevice();
   const setBrightness = useSetBrightness();
   const toggleAllDevices = useToggleAllDevicesInRoom();
@@ -66,6 +70,31 @@ export function RoomDashboard({ room }: RoomDashboardProps) {
         <GlassCard disableTilt>
           <CardContent className="flex items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </CardContent>
+        </GlassCard>
+      </div>
+    );
+  }
+
+  if (devicesError) {
+    return (
+      <div className="space-y-6">
+        <GlassCard disableTilt>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center text-center space-y-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Failed to Load Devices</h3>
+                <p className="mt-2 text-sm text-muted-foreground max-w-md">
+                  {devicesError instanceof Error ? devicesError.message : 'An unexpected error occurred.'}
+                </p>
+              </div>
+              <Button onClick={() => refetchDevices()} variant="outline" className="shadow-gold-glow-sm">
+                Try Again
+              </Button>
+            </div>
           </CardContent>
         </GlassCard>
       </div>
@@ -185,6 +214,25 @@ export function RoomDashboard({ room }: RoomDashboardProps) {
             </CardContent>
           </GlassCard>
         </div>
+      )}
+
+      {/* Sensor Error State */}
+      {sensorsError && !sensorsLoading && (
+        <GlassCard disableTilt>
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                <p className="text-sm text-muted-foreground">
+                  {sensorsError instanceof Error ? sensorsError.message : 'Failed to load sensor data'}
+                </p>
+              </div>
+              <Button onClick={() => refetchSensors()} variant="outline" size="sm">
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </GlassCard>
       )}
 
       {/* Device Controls */}

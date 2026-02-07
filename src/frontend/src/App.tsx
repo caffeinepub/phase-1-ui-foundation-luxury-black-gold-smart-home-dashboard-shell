@@ -7,6 +7,7 @@ import { RoomsPage } from './pages/RoomsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SupportInfoPage } from './pages/SupportInfoPage';
 import { VirtualHome3DPage } from './pages/VirtualHome3DPage';
+import { useAutoProvisionUser } from './hooks/useAutoProvisionUser';
 
 export type NavigationView = 'dashboard' | 'rooms' | 'settings' | 'support' | '3d-view';
 
@@ -14,6 +15,9 @@ function AppContent() {
   const { isUnlocked } = useSecurityGateway();
   const [currentView, setCurrentView] = useState<NavigationView>('dashboard');
   const [previousView, setPreviousView] = useState<NavigationView>('dashboard');
+
+  // Trigger auto-provisioning at app level after unlock
+  useAutoProvisionUser();
 
   const handleNavigate = (view: NavigationView) => {
     if (view === '3d-view') {

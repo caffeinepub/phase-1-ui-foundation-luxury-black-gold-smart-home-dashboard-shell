@@ -1,5 +1,6 @@
 import Map "mo:core/Map";
 import Nat8 "mo:core/Nat8";
+import Nat "mo:core/Nat";
 import Array "mo:core/Array";
 import Iter "mo:core/Iter";
 import Principal "mo:core/Principal";
@@ -7,8 +8,6 @@ import Runtime "mo:core/Runtime";
 
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
-
-// Apply migration on upgrade, provide access control mixin
 
 actor {
   // Initialize access control state
@@ -79,16 +78,78 @@ actor {
   let userProfiles = Map.empty<Principal, UserProfile>();
   let supportTickets = Map.empty<Principal, SupportTicket>();
 
-  // Room management - Admin at creation
+  // Auto-provision user role for new authenticated principals
+  // This method allows guests to self-provision to user role on first login
+  public shared ({ caller }) func initializeAccess() : async () {
+    // Only provision if caller is currently a guest
+    if (AccessControl.getUserRole(accessControlState, caller) == #guest) {
+      // Self-provision to user role
+      // Note: assignRole must allow self-provisioning for #user role
+      AccessControl.assignRole(accessControlState, caller, caller, #user);
+    };
+    // If already has a role, silently succeed (idempotent operation)
+  };
+
+  // ROOMS LAZY LOADING / PAGINATION SUPPORT
+  /// Returns all rooms meta-data without devices list (for list-views)
+  public query ({ caller }) func getAllRoomSummaries() : async [RoomInfo] {
+    _assertUser(caller);
+    rooms.values().toArray().map<Room, RoomInfo>(
+      func(r) { r }
+    );
+  };
+
+  /// Returns only a room range (support lazy loading)
+  public query ({ caller }) func getRoomSummariesRange(fromIndex : Nat, toIndex : Nat) : async [RoomInfo] {
+    _assertUser(caller);
+    let allRooms = rooms.values().toArray();
+    getSlice(allRooms, fromIndex, toIndex);
+  };
+
+  /// Returns only a room range (support lazy loading)
+  func getSlice(arr : [Room], fromIndex : Nat, toIndex : Nat) : [RoomInfo] {
+    let validatedFrom = fromIndex;
+    let validatedTo = Nat.min(toIndex, arr.size());
+    if (validatedFrom >= validatedTo) { return [] };
+    let size = validatedTo - validatedFrom : Nat;
+    Array.tabulate<RoomInfo>(
+      size,
+      func(i) {
+        let origIndex = validatedFrom + i;
+        toRoomInfo(arr[origIndex]);
+      },
+    );
+  };
+
+  func toRoomInfo(room : Room) : RoomInfo {
+    room;
+  };
+
   public shared ({ caller }) func createRoom(roomId : RoomId, name : Text, color : Text, isHidden : Bool) : async () {
     _assertAdmin(caller);
     let newRoom = { id = roomId; name; color; isHidden };
     rooms.add(roomId, newRoom);
   };
 
+  public shared ({ caller }) func toggleRoomHidden(roomId : RoomId) : async Bool {
+    _assertAdmin(caller);
+
+    switch (rooms.get(roomId)) {
+      case (null) { Runtime.trap("Room not found") };
+      case (?room) {
+        let updatedRoom = {
+          room with
+          isHidden = not room.isHidden;
+        };
+        rooms.add(roomId, updatedRoom);
+        updatedRoom.isHidden;
+      };
+    };
+  };
+
   // Update existing room settings (name and color)
   public shared ({ caller }) func updateRoomSettings(roomId : RoomId, name : Text, color : Text) : async () {
-    _assertUser(caller);
+    _assertAdmin(caller);
 
     switch (rooms.get(roomId)) {
       case (null) { Runtime.trap("Room not found") };
@@ -101,7 +162,7 @@ actor {
 
   // Set room hidden entry
   public shared ({ caller }) func setRoomHidden(roomId : RoomId, isHidden : Bool) : async () {
-    _assertUser(caller);
+    _assertAdmin(caller);
 
     switch (rooms.get(roomId)) {
       case (null) { Runtime.trap("Room not found") };

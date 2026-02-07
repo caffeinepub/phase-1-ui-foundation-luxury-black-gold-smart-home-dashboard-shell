@@ -132,15 +132,24 @@ export interface backendInterface {
     createDevice(deviceId: DeviceId, name: string, roomId: RoomId, isOn: boolean, brightness: number): Promise<void>;
     createRoom(roomId: RoomId, name: string, color: string, isHidden: boolean): Promise<void>;
     getAllDevices(): Promise<Array<[DeviceId, LightDevice]>>;
+    /**
+     * / Returns all rooms meta-data without devices list (for list-views)
+     */
+    getAllRoomSummaries(): Promise<Array<RoomInfo>>;
     getAllRooms(): Promise<Array<RoomInfo>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getDevices(roomId: RoomId): Promise<Array<[DeviceId, LightDevice]>>;
     getRoomInfo(roomId: RoomId): Promise<RoomInfo | null>;
     getRoomSensorStats(roomId: RoomId): Promise<SensorStats | null>;
+    /**
+     * / Returns only a room range (support lazy loading)
+     */
+    getRoomSummariesRange(fromIndex: bigint, toIndex: bigint): Promise<Array<RoomInfo>>;
     getRoomSwitchInfo(roomId: RoomId): Promise<RoomSwitchInfo | null>;
     getSupportTicket(user: Principal): Promise<SupportTicket | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    initializeAccess(): Promise<void>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     setBrightness(deviceId: DeviceId, brightness: number): Promise<boolean>;
@@ -148,6 +157,7 @@ export interface backendInterface {
     submitSupportTicket(subject: string, description: string): Promise<void>;
     toggleAllDevicesInRoom(roomId: RoomId, turnOn: boolean): Promise<boolean>;
     toggleDevice(deviceId: DeviceId): Promise<boolean>;
+    toggleRoomHidden(roomId: RoomId): Promise<boolean>;
     updateRoomSettings(roomId: RoomId, name: string, color: string): Promise<void>;
 }
 import type { RoomInfo as _RoomInfo, RoomSwitchInfo as _RoomSwitchInfo, SensorStats as _SensorStats, SupportTicket as _SupportTicket, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
@@ -237,6 +247,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getAllRoomSummaries(): Promise<Array<RoomInfo>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAllRoomSummaries();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAllRoomSummaries();
+            return result;
+        }
+    }
     async getAllRooms(): Promise<Array<RoomInfo>> {
         if (this.processError) {
             try {
@@ -321,6 +345,20 @@ export class Backend implements backendInterface {
             return from_candid_opt_n7(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getRoomSummariesRange(arg0: bigint, arg1: bigint): Promise<Array<RoomInfo>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getRoomSummariesRange(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getRoomSummariesRange(arg0, arg1);
+            return result;
+        }
+    }
     async getRoomSwitchInfo(arg0: RoomId): Promise<RoomSwitchInfo | null> {
         if (this.processError) {
             try {
@@ -361,6 +399,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getUserProfile(arg0);
             return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async initializeAccess(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.initializeAccess();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.initializeAccess();
+            return result;
         }
     }
     async isCallerAdmin(): Promise<boolean> {
@@ -458,6 +510,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.toggleDevice(arg0);
+            return result;
+        }
+    }
+    async toggleRoomHidden(arg0: RoomId): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.toggleRoomHidden(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.toggleRoomHidden(arg0);
             return result;
         }
     }

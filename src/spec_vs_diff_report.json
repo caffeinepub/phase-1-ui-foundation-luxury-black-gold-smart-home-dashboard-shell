@@ -1,40 +1,60 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T18:13:57.942Z",
-  "summary": "Diff implements key parts of Phase 3: enhanced scene lighting/shadows, joystick deadzone + desktop mouse support, per-room navigation bounds, room-selection on scene click with documented fallback, and device hotspot click propagation control. However, room-surface picking is not true wall/floor mesh picking (it’s canvas click mapped by camera position), and the new realistic interior model is not clearly wired into the rendered 3D scene (scene still shows <BasicInterior /> in the visible snippet).",
+  "generatedAt": "2026-02-07T18:59:15.258Z",
+  "summary": "REQ-7/REQ-8 are partially implemented via a new backend method `initializeAccess()` and a new frontend hook `useAutoProvisionUser()` that calls it before enabling Rooms queries. However, the backend method does not enforce the anonymous-principal rejection requirement, and REQ-6’s “automatic on first interaction” provisioning is not evidenced beyond the explicit frontend call. Additionally, provisioning is invoked in both `App.tsx` and `RoomsPage.tsx`, which may violate the “once per session/actor creation” intent by triggering duplicate calls from separate hook instances.",
   "missing_requirements": [
     {
-      "id": "REQ-3",
-      "requirement": "Clicking any room wall or floor surface must open SmartRoomSidebar by setting activeRoomId; surface clicks should select the correct room when possible and otherwise select a sensible default room.",
-      "reason": "Room selection is implemented via a DOM canvas 'click' listener and infers roomId from the camera position rather than detecting which wall/floor mesh was clicked (no raycast/intersection with wall/floor meshes is shown). This does not satisfy 'clicking any room wall or floor surface' and may also trigger on clicks that are not on surfaces.",
+      "id": "REQ-6",
+      "requirement": "Automatically provision an authenticated caller with the '#user' role on first login/first use (so previously unseen authenticated principals get '#user' on first interaction), without changing existing roles.",
+      "reason": "The diff shows a new explicit provisioning method (`initializeAccess`) but does not show any automatic provisioning being invoked by existing user-gated backend endpoints on first interaction (e.g., inside `getAllRoomSummaries/getAllRooms/getAllDevices`). Provisioning appears to rely on the frontend calling the new method instead.",
       "evidence": [
-        "frontend/src/components/virtual-home/rooms/RoomSurfacePickerLayer.tsx (adds canvas click listener; selects room based on camera.position x/z rather than mesh hit testing)"
+        "backend/main.mo (shows only new `initializeAccess()`; user-gated queries still call `_assertUser(caller)` directly)"
       ]
     },
     {
-      "id": "REQ-1",
-      "requirement": "Render a visible, realistic 3D house/interior (floors + walls + ceiling + furniture/decor) as the default 3D experience with stable lighting/shadows/materials.",
-      "reason": "A detailed/realistic model is present in the diff, but the main scene (as shown) still renders <BasicInterior />; the diff snippet does not show the realistic interior being used as the default rendered interior in the 3D scene.",
+      "id": "REQ-6",
+      "requirement": "Provisioning flow must not grant roles to the anonymous principal.",
+      "reason": "`initializeAccess()` assigns `#user` when the caller’s role is `#guest`, but there is no explicit check that `caller` is non-anonymous before assigning. If anonymous maps to `#guest`, this would grant `#user` to anonymous, violating the requirement.",
       "evidence": [
-        "frontend/src/components/virtual-home/VirtualHomeScene.tsx (renders <BasicInterior /> in the shown snippet)",
-        "frontend/src/components/virtual-home/RealisticHomeModel.tsx (realistic model exists but is not shown as used in the scene snippet)"
+        "backend/main.mo (`initializeAccess()` lacks `Principal.isAnonymous(caller)` guard)"
+      ]
+    },
+    {
+      "id": "REQ-7",
+      "requirement": "If the caller is anonymous, the provisioning method rejects/traps with a clear Unauthorized error.",
+      "reason": "The new shared method `initializeAccess()` does not trap or reject for anonymous callers; it silently succeeds (and may assign role depending on `#guest` mapping).",
+      "evidence": [
+        "backend/main.mo (`initializeAccess()` has no trap/reject path for anonymous)"
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "requirement": "Provisioning call runs once per session (or once per actor creation) and does not spam repeated calls on re-render.",
+      "reason": "`useAutoProvisionUser()` uses an internal `hasRunRef` to avoid repeated calls per hook instance, but the hook is used in both `frontend/src/App.tsx` and `frontend/src/pages/RoomsPage.tsx`, creating two independent instances that can each call `actor.initializeAccess()` once per actor creation (duplicate calls per session).",
+      "evidence": [
+        "frontend/src/App.tsx (calls `useAutoProvisionUser()`)",
+        "frontend/src/pages/RoomsPage.tsx (also calls `useAutoProvisionUser()`)"
       ]
     }
   ],
-  "hallucinated_features": [],
-  "confidence": 0.63,
+  "hallucinated_features": [
+    {
+      "description": "Added extensive room-query timeout/validation/refetch behavior changes (e.g., `withTimeout`, defensive validation, refetch policy tweaks) beyond the auto-provisioning requirement.",
+      "reason": "BuildRequest focuses on provisioning flow and gating Rooms fetches until provisioning; it does not request broader changes to React Query timeouts, retry counts, defensive validation, or refetch policies.",
+      "evidence": [
+        "frontend/src/hooks/useQueries.ts"
+      ]
+    }
+  ],
+  "confidence": 0.74,
   "changed_files": [
+    "backend/main.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/virtual-home/RealisticHomeModel.tsx",
-    "frontend/src/components/virtual-home/VirtualHomeScene.tsx",
-    "frontend/src/components/virtual-home/controls/VirtualJoystick.tsx",
-    "frontend/src/components/virtual-home/controls/VirtualNavigation.tsx",
-    "frontend/src/components/virtual-home/hotspots/DeviceHotspot.tsx",
-    "frontend/src/components/virtual-home/lighting/SceneLighting.tsx",
-    "frontend/src/components/virtual-home/rooms/RoomSurfacePickerLayer.tsx",
+    "frontend/src/App.tsx",
+    "frontend/src/hooks/useAutoProvisionUser.ts",
     "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/VirtualHome3DPage.tsx",
+    "frontend/src/pages/RoomsPage.tsx",
     "project_state.json"
   ]
 }

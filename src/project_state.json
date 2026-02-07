@@ -1,42 +1,20 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Add Phase 3: a 3D Walkthrough game mode with PUBG-style joystick movement, interactive room surfaces that open the existing Mini Sidebar, and a visible realistic 3D house.",
+  "summary": "New project",
   "architectural_notes": [
-    "Phase 3 introduces a 3D walkthrough mode that reuses the Phase 1 Mini Sidebar UI for interactions on 3D surfaces (walls/floors)."
+    "On first successful authentication (e.g., Internet Identity), backend should auto-provision the caller as a 'user' if not already registered, so Rooms API calls don't fail with 'Unauthorized: Must have user role'."
   ],
-  "known_issues": [],
-  "isFixRequest": false,
+  "known_issues": [
+    "Rooms page can fail to load with 'Unauthorized: Must have user role' for newly authenticated users who are not yet registered as 'user' in backend."
+  ],
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-ensure-the-3d-walkthrough-mode-is-fully-usable-as-the-default-3d-experience-render-a-visible-realistic-3d-house-interior-with-stable-lighting-shadows-and-materials-so-that-walls-floors-furniture-are-clearly-readable-in-dark-ui-context",
-      "title": "Ensure the 3D Walkthrough mode is fully usable as the default 3D experience: render a visible, realistic 3D house/interior with stable lighting, shadows, and materials so that walls/floors/furniture are clearly readable in dark UI context.",
+      "id": "feature-update-the-frontend-to-call-the-new-provisioning-method-once-after-successful-authentication-internet-identity-and-before-triggering-rooms-related-react-query-fetches-so-that-the-rooms-page-can-load-successfully-for-first-time-users-without-manual-retries",
+      "title": "Update the frontend to call the new provisioning method once after successful authentication (Internet Identity) and before triggering Rooms-related React Query fetches, so that the Rooms page can load successfully for first-time users without manual retries.",
       "reqIds": [
-        "REQ-1"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-add-ensure-pubg-style-on-screen-joystick-movement-for-3d-walkthrough-mode-joystick-must-control-forward-back-strafe-movement-smoothly-with-a-small-deadzone-and-it-must-be-available-in-3d-mode-including-non-touch-devices-while-still-supporting-existing-wasd-mouse-look-controls",
-      "title": "Add/ensure PUBG-style on-screen joystick movement for 3D Walkthrough mode: joystick must control forward/back/strafe movement smoothly with a small deadzone, and it must be available in 3D mode (including non-touch devices), while still supporting existing WASD + mouse-look controls.",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-in-3d-walkthrough-mode-clicking-any-room-wall-or-floor-surface-must-open-the-same-mini-sidebar-used-elsewhere-smartroomsidebar-by-setting-the-active-room-selection-state-surface-clicks-should-select-the-correct-room-when-possible-and-otherwise-select-a-sensible-default-room",
-      "title": "In 3D Walkthrough mode, clicking any room wall or floor surface must open the same Mini Sidebar used elsewhere (SmartRoomSidebar) by setting the active room selection state; surface clicks should select the correct room when possible and otherwise select a sensible default room.",
-      "reqIds": [
-        "REQ-3"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-make-the-3d-scene-data-flow-consistent-with-the-selected-active-room-device-fetching-mapped-device-hotspot-rendering-lighting-fixtures-and-navigation-bounds-must-respect-the-current-active-room-selection-and-teleport-target-not-a-hardcoded-room-id",
-      "title": "Make the 3D scene data flow consistent with the selected/active room: device fetching, mapped device hotspot rendering, lighting fixtures, and navigation bounds must respect the current active room selection (and teleport target), not a hardcoded room id.",
-      "reqIds": [
-        "REQ-4"
+        "REQ-8"
       ],
       "version": 1
     }
@@ -44,25 +22,28 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Implement 3D Walkthrough mode (Phase 3) with a visible, realistic 3D house environment.",
+      "summary": "Auto-register/provision a new authenticated user as role 'user' on first login to prevent Rooms page Unauthorized error",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Add PUBG-style on-screen joystick controls for movement in 3D Walkthrough mode.",
-      "reqIds": [],
+      "summary": "Add a backend flow that automatically provisions an authenticated caller with the '#user' role on first login/first use, so that newly signed-in users do not hit \"Unauthorized: Must have user role\" when loading Rooms.",
+      "reqIds": [
+        "REQ-6"
+      ],
       "status": "pending"
     },
     {
       "id": "AR-3",
-      "summary": "In 3D mode, clicking any room wall or floor opens the same Mini Sidebar from Phase 1.",
-      "reqIds": [],
+      "summary": "Expose a backend shared method that the frontend can call immediately after Internet Identity login to trigger user auto-provisioning (because Rooms list endpoints are query calls and cannot mutate state).",
+      "reqIds": [
+        "REQ-7"
+      ],
       "status": "pending"
     }
   ],
-  "gameProjectType": "3d",
-  "projectName": "Phase 3: 3D Walkthrough mode with PUBG-style joystick and clickable room surfaces opening the Mini Sidebar",
+  "projectName": "Auto-provision authenticated principals as 'user' role to prevent Rooms Unauthorized error",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

@@ -1,91 +1,74 @@
 {
   "kind": "build_request",
-  "title": "Phase 3: 3D Walkthrough mode with PUBG-style joystick and clickable room surfaces opening the Mini Sidebar",
-  "priority": "normal",
+  "title": "Auto-provision authenticated principals as 'user' role to prevent Rooms Unauthorized error",
+  "priority": "high",
   "requirements": [
     {
-      "id": "REQ-1",
-      "text": "Ensure the 3D Walkthrough mode is fully usable as the default 3D experience: render a visible, realistic 3D house/interior with stable lighting, shadows, and materials so that walls/floors/furniture are clearly readable in dark UI context.",
-      "target": "frontend",
+      "id": "REQ-6",
+      "text": "Add a backend flow that automatically provisions an authenticated caller with the '#user' role on first login/first use, so that newly signed-in users do not hit \"Unauthorized: Must have user role\" when loading Rooms.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "recent-messages"
         ],
         "quotes": [
-          "Phase 3: 3D Game Mode \"Finally, add the 3D Walkthrough mode... Ensure the 3D house is visible and realistic.\""
+          "Failed to Load Rooms\nUnauthorized: Must have user role",
+          "ايوة عدلو"
         ]
       },
       "acceptanceCriteria": [
-        "Entering the Virtual Home in 3D mode shows a complete interior (floors + walls + ceiling + furniture/decor) that is clearly visible (not black/unlit)",
-        "Shadows and lighting make depth cues apparent without overexposure; the scene remains visually stable while moving/looking around",
-        "No console errors are produced during initial render of the 3D scene"
+        "When a previously unseen authenticated principal interacts with the canister for the first time, the principal is granted the '#user' role automatically.",
+        "The provisioning flow must not grant roles to the anonymous principal.",
+        "Existing role assignments (including admins) continue to work unchanged.",
+        "After provisioning, calling existing user-gated endpoints (e.g., getAllRoomSummaries/getAllRooms/getAllDevices) succeeds for the new user without returning \"Unauthorized: Must have user role\"."
       ]
     },
     {
-      "id": "REQ-2",
-      "text": "Add/ensure PUBG-style on-screen joystick movement for 3D Walkthrough mode: joystick must control forward/back/strafe movement smoothly with a small deadzone, and it must be available in 3D mode (including non-touch devices), while still supporting existing WASD + mouse-look controls.",
-      "target": "frontend",
+      "id": "REQ-7",
+      "text": "Expose a backend shared method that the frontend can call immediately after Internet Identity login to trigger user auto-provisioning (because Rooms list endpoints are query calls and cannot mutate state).",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "recent-messages"
         ],
         "quotes": [
-          "Add a Joystick (PUBG-style) for movement."
+          "أول ما تدخل، الـ backend بيحتاج يسجّلك تلقائيًا كـ user."
         ]
       },
       "acceptanceCriteria": [
-        "In 3D mode, an on-screen joystick is visible and usable to move the camera (forward/backward/left/right)",
-        "Joystick movement is smooth and has a deadzone so the camera does not drift when the stick is near center",
-        "WASD + mouse-look continue to work on desktop; joystick does not break desktop controls",
-        "When a modal/dialog is open in the 3D scene, joystick movement is disabled and resets to (0,0)"
+        "A new shared backend method exists that (1) checks whether caller already has '#user', (2) if not, grants '#user', and (3) is safe to call multiple times (idempotent).",
+        "If the caller is anonymous, the method rejects/traps with a clear Unauthorized error."
       ]
     },
     {
-      "id": "REQ-3",
-      "text": "In 3D Walkthrough mode, clicking any room wall or floor surface must open the same Mini Sidebar used elsewhere (SmartRoomSidebar) by setting the active room selection state; surface clicks should select the correct room when possible and otherwise select a sensible default room.",
+      "id": "REQ-8",
+      "text": "Update the frontend to call the new provisioning method once after successful authentication (Internet Identity) and before triggering Rooms-related React Query fetches, so that the Rooms page can load successfully for first-time users without manual retries.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "recent-messages"
         ],
         "quotes": [
-          "In this mode, clicking any room wall or floor must also open the same Mini Sidebar from Phase 1."
+          "Fix Rooms page not opening… Unauthorized: Must have user role",
+          "ايوة"
         ]
       },
       "acceptanceCriteria": [
-        "Clicking/tapping a floor or wall mesh in the 3D scene opens the existing SmartRoomSidebar UI (no new sidebar component)",
-        "A surface click updates the same room selection state used by the 2D map/room selector (activeRoomId in VirtualHome3DPage)",
-        "If the clicked surface is associated with a specific room, that room becomes active; if not determinable, a defined fallback room becomes active (documented in code)",
-        "Clicking device hotspots still opens the device dialog and does not unintentionally trigger the room sidebar selection"
-      ]
-    },
-    {
-      "id": "REQ-4",
-      "text": "Make the 3D scene data flow consistent with the selected/active room: device fetching, mapped device hotspot rendering, lighting fixtures, and navigation bounds must respect the current active room selection (and teleport target), not a hardcoded room id.",
-      "target": "frontend",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "3D Walkthrough mode... clicking any room wall or floor must also open the same Mini Sidebar..."
-        ]
-      },
-      "acceptanceCriteria": [
-        "No device queries inside the 3D scene are hardcoded to a single room id (e.g., room 1) when a different active room is selected",
-        "When the active room changes (via room selector, 2D map selection, or 3D surface click), the 3D scene updates device hotspots/fixtures consistently with the active room (or clearly renders a defined cross-room behavior)",
-        "Navigation bounds continue to clamp movement based on activeRoomId and room-specific bounds where available"
+        "After logging in with Internet Identity, the app triggers the provisioning call once per session (or once per actor creation) and does not spam repeated calls on re-render.",
+        "Navigating to the Rooms view after first login loads the rooms list instead of showing the Unauthorized error screen.",
+        "If provisioning fails, the UI surfaces a clear error state and still allows the user to retry provisioning and then re-fetch Rooms."
       ]
     }
   ],
   "constraints": [
-    "Do not edit files under frontend/src/components/ui or any frontend immutablePaths listed in SYSTEM_CONTEXT.",
-    "Keep backend as a single Motoko actor; no new backend services."
+    "Backend must remain a single Motoko actor in backend/main.mo.",
+    "Do not modify any files under frontend/src/hooks/useActor.ts, frontend/src/hooks/useInternetIdentity.ts(x), or frontend/src/main.tsx (immutable paths).",
+    "User-facing text added/updated in the UI must be in English."
   ],
   "nonGoals": [
-    "Adding multiplayer/real-time movement or networking.",
-    "Adding new backend persistence specifically for 3D geometry or mesh picking.",
-    "Implementing external 3D model loading pipelines (e.g., GLTF import tooling) unless already present."
+    "Implementing third-party authentication providers (only Internet Identity).",
+    "Adding new databases or external persistence layers.",
+    "Changing the existing admin-only restrictions for creating rooms/devices."
   ],
   "imageRequirements": {
     "required": [],

@@ -1,12 +1,12 @@
 # Specification
 
 ## Summary
-**Goal:** Make the 3D Walkthrough mode the default-quality 3D experience with a clearly visible interior, PUBG-style on-screen joystick movement, and room-surface clicking that opens the existing Mini Sidebar while keeping room selection and device/scene data consistent.
+**Goal:** Prevent first-time authenticated users from seeing “Unauthorized: Must have user role” by automatically provisioning them with the `#user` role after Internet Identity login.
 
 **Planned changes:**
-- Improve/ensure the 3D house/interior renders with stable lighting, shadows, and materials so walls/floors/furniture are clearly readable in the dark UI context and the scene renders without console errors.
-- Add/ensure an on-screen PUBG-style joystick in 3D mode (also on non-touch devices) with smooth movement and a deadzone, while preserving WASD + mouse-look; disable and reset joystick input when modals/dialogs are open.
-- Enable clicking/tapping wall/floor surfaces in the 3D scene to set the existing active room selection state and open the existing SmartRoomSidebar; select the correct room when determinable, otherwise fall back to a defined default.
-- Update 3D scene data flow to respect the current active room (and teleport target) for device fetching, device hotspot mapping, lighting fixtures, and navigation bounds, removing any hardcoded room id behavior.
+- Backend: auto-provision `#user` role for previously unseen authenticated principals on first interaction, without granting anything to the anonymous principal, and without affecting existing roles (including admins).
+- Backend: add a new shared, idempotent provisioning method that the frontend can call after login to ensure the caller has `#user` (reject/trap with a clear Unauthorized error for anonymous callers).
+- Frontend: call the provisioning method once after successful Internet Identity authentication and before Rooms-related React Query fetches, avoiding repeated calls on re-render.
+- Frontend: if provisioning fails, show a clear English error state with a retry action that can re-run provisioning and then re-fetch Rooms.
 
-**User-visible outcome:** In 3D Walkthrough mode, users see a properly lit, readable home interior, can move using either an on-screen joystick or WASD/mouse, and can click room surfaces to open the existing Mini Sidebar for that room with devices/hotspots and navigation behavior matching the selected room.
+**User-visible outcome:** After logging in with Internet Identity, first-time users can open the Rooms view and load room/device lists without hitting the “Must have user role” Unauthorized error, and can retry provisioning if an error occurs.

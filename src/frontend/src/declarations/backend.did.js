@@ -58,6 +58,7 @@ export const idlService = IDL.Service({
       [IDL.Vec(IDL.Tuple(DeviceId, LightDevice))],
       ['query'],
     ),
+  'getAllRoomSummaries' : IDL.Func([], [IDL.Vec(RoomInfo)], ['query']),
   'getAllRooms' : IDL.Func([], [IDL.Vec(RoomInfo)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
@@ -68,6 +69,11 @@ export const idlService = IDL.Service({
     ),
   'getRoomInfo' : IDL.Func([RoomId], [IDL.Opt(RoomInfo)], ['query']),
   'getRoomSensorStats' : IDL.Func([RoomId], [IDL.Opt(SensorStats)], ['query']),
+  'getRoomSummariesRange' : IDL.Func(
+      [IDL.Nat, IDL.Nat],
+      [IDL.Vec(RoomInfo)],
+      ['query'],
+    ),
   'getRoomSwitchInfo' : IDL.Func(
       [RoomId],
       [IDL.Opt(RoomSwitchInfo)],
@@ -83,6 +89,7 @@ export const idlService = IDL.Service({
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
+  'initializeAccess' : IDL.Func([], [], []),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'setBrightness' : IDL.Func([DeviceId, IDL.Nat8], [IDL.Bool], []),
@@ -90,6 +97,7 @@ export const idlService = IDL.Service({
   'submitSupportTicket' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'toggleAllDevicesInRoom' : IDL.Func([RoomId, IDL.Bool], [IDL.Bool], []),
   'toggleDevice' : IDL.Func([DeviceId], [IDL.Bool], []),
+  'toggleRoomHidden' : IDL.Func([RoomId], [IDL.Bool], []),
   'updateRoomSettings' : IDL.Func([RoomId, IDL.Text, IDL.Text], [], []),
 });
 
@@ -146,6 +154,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(IDL.Tuple(DeviceId, LightDevice))],
         ['query'],
       ),
+    'getAllRoomSummaries' : IDL.Func([], [IDL.Vec(RoomInfo)], ['query']),
     'getAllRooms' : IDL.Func([], [IDL.Vec(RoomInfo)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
@@ -158,6 +167,11 @@ export const idlFactory = ({ IDL }) => {
     'getRoomSensorStats' : IDL.Func(
         [RoomId],
         [IDL.Opt(SensorStats)],
+        ['query'],
+      ),
+    'getRoomSummariesRange' : IDL.Func(
+        [IDL.Nat, IDL.Nat],
+        [IDL.Vec(RoomInfo)],
         ['query'],
       ),
     'getRoomSwitchInfo' : IDL.Func(
@@ -175,6 +189,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
+    'initializeAccess' : IDL.Func([], [], []),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'setBrightness' : IDL.Func([DeviceId, IDL.Nat8], [IDL.Bool], []),
@@ -182,6 +197,7 @@ export const idlFactory = ({ IDL }) => {
     'submitSupportTicket' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'toggleAllDevicesInRoom' : IDL.Func([RoomId, IDL.Bool], [IDL.Bool], []),
     'toggleDevice' : IDL.Func([DeviceId], [IDL.Bool], []),
+    'toggleRoomHidden' : IDL.Func([RoomId], [IDL.Bool], []),
     'updateRoomSettings' : IDL.Func([RoomId, IDL.Text, IDL.Text], [], []),
   });
 };

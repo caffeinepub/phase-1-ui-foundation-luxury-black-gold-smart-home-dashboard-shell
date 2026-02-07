@@ -8,7 +8,7 @@ import { VirtualHomeModeToggle } from '../components/virtual-home/VirtualHomeMod
 import { RoomSelector } from '../components/virtual-home/RoomSelector';
 import { SmartRoomSidebar } from '../components/virtual-home/SmartRoomSidebar';
 import { useWebGLSupport } from '../hooks/useWebGLSupport';
-import { useGetAllRooms, useGetDevicesByRoom } from '../hooks/useQueries';
+import { useGetAllRooms } from '../hooks/useQueries';
 import type { RoomId } from '../backend';
 
 interface VirtualHome3DPageProps {
@@ -31,11 +31,6 @@ export function VirtualHome3DPage({ onExit }: VirtualHome3DPageProps) {
   
   // Fetch all rooms for selector and 2D map
   const { data: rooms = [], isLoading: roomsLoading } = useGetAllRooms();
-  
-  // Fetch devices for active room (for sidebar) - only when activeRoomId is set
-  const { data: activeRoomDevices = [] } = useGetDevicesByRoom(
-    activeRoomId !== null ? activeRoomId : undefined as any
-  );
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -96,9 +91,6 @@ export function VirtualHome3DPage({ onExit }: VirtualHome3DPageProps) {
   
   // Determine if we should show the scene
   const canRenderScene = webglSupported === true && !renderError;
-
-  // Modal open state for joystick disable
-  const isModalOpen = showRoomSelector;
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-black">
@@ -221,11 +213,10 @@ export function VirtualHome3DPage({ onExit }: VirtualHome3DPageProps) {
         />
       )}
 
-      {/* Smart Room Sidebar */}
+      {/* Smart Room Sidebar - fetches its own device data */}
       {activeRoomId !== null && (
         <SmartRoomSidebar
           roomId={activeRoomId}
-          devices={activeRoomDevices}
           onClose={handleCloseSidebar}
         />
       )}
