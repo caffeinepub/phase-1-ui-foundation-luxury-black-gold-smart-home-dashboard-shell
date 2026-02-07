@@ -66,9 +66,10 @@ export function useGetRoomsForCount(count: number, options?: { enabled?: boolean
       }
     },
     enabled: options?.enabled !== false && !!actor && !isFetching && count > 0,
-    staleTime: 0, // Always refetch when count changes
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
     retry: 2,
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -94,22 +95,23 @@ export function useGetRoomSummariesRange(fromIndex: number, toIndex: number, opt
         }
         return result;
       } catch (error) {
-        console.error('Error fetching room summaries:', error);
+        console.error('Error fetching room summaries range:', error);
         throw error;
       }
     },
     enabled: options?.enabled !== false && !!actor && !isFetching,
     staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
     retry: 2,
   });
 }
 
-// Get all rooms (for dashboard and other components)
-export function useGetAllRooms() {
+// Room Queries - Get all rooms
+export function useGetAllRooms(options?: { enabled?: boolean }) {
   const { actor, isFetching } = useActor();
 
   return useQuery<RoomInfo[]>({
-    queryKey: ['rooms', 'all'],
+    queryKey: ['allRooms'],
     queryFn: async () => {
       if (!actor) {
         throw new Error('Unable to connect to backend. Please check your connection.');
@@ -130,14 +132,15 @@ export function useGetAllRooms() {
         throw error;
       }
     },
-    enabled: !!actor && !isFetching,
+    enabled: options?.enabled !== false && !!actor && !isFetching,
     staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
     retry: 2,
   });
 }
 
-// Get single room info by ID
-export function useGetRoomInfo(roomId: RoomId) {
+// Room Queries - Get single room info
+export function useGetRoomInfo(roomId: RoomId, options?: { enabled?: boolean }) {
   const { actor, isFetching } = useActor();
 
   return useQuery<RoomInfo | null>({
@@ -150,7 +153,7 @@ export function useGetRoomInfo(roomId: RoomId) {
         const result = await withTimeout(
           actor.getRoomInfo(roomId),
           10000,
-          'Loading room details is taking longer than expected. Please try again.'
+          'Loading room information is taking longer than expected. Please try again.'
         );
         return result;
       } catch (error) {
@@ -158,13 +161,14 @@ export function useGetRoomInfo(roomId: RoomId) {
         throw error;
       }
     },
-    enabled: !!actor && !isFetching,
+    enabled: options?.enabled !== false && !!actor && !isFetching,
     staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
     retry: 2,
   });
 }
 
-// Create room mutation
+// Room Mutations
 export function useCreateRoom() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -175,28 +179,8 @@ export function useCreateRoom() {
       return actor.createRoom(roomId, name, color, isHidden);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
-      queryClient.invalidateQueries({ queryKey: ['roomSummaries'] });
-      queryClient.invalidateQueries({ queryKey: ['roomInfo'] });
       queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
-    },
-  });
-}
-
-export function useToggleRoomRunningState() {
-  const { actor } = useActor();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (roomId: RoomId) => {
-      if (!actor) throw new Error('Actor not available');
-      return actor.toggleRoomRunningState(roomId);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roomSummaries'] });
-      queryClient.invalidateQueries({ queryKey: ['roomInfo'] });
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
-      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
+      queryClient.invalidateQueries({ queryKey: ['allRooms'] });
     },
   });
 }
@@ -210,11 +194,10 @@ export function useUpdateRoomSettings() {
       if (!actor) throw new Error('Actor not available');
       return actor.updateRoomSettings(roomId, name, color);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roomSummaries'] });
-      queryClient.invalidateQueries({ queryKey: ['roomInfo'] });
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
+      queryClient.invalidateQueries({ queryKey: ['allRooms'] });
+      queryClient.invalidateQueries({ queryKey: ['roomInfo', variables.roomId] });
     },
   });
 }
@@ -229,51 +212,50 @@ export function useSetRoomHidden() {
       return actor.setRoomHidden(roomId, isHidden);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['roomSummaries'] });
-      queryClient.invalidateQueries({ queryKey: ['roomInfo'] });
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
       queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
+      queryClient.invalidateQueries({ queryKey: ['allRooms'] });
+    },
+  });
+}
+
+export function useToggleRoomRunningState() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (roomId: RoomId) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.toggleRoomRunningState(roomId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
+      queryClient.invalidateQueries({ queryKey: ['allRooms'] });
+    },
+  });
+}
+
+export function useSetRoomRunning() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ roomId, isRunning }: { roomId: RoomId; isRunning: boolean }) => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.setRoomRunning(roomId, isRunning);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
+      queryClient.invalidateQueries({ queryKey: ['allRooms'] });
     },
   });
 }
 
 // Device Queries
-export function useGetDevicesByRoom(roomId: RoomId) {
+export function useGetAllDevices(options?: { enabled?: boolean }) {
   const { actor, isFetching } = useActor();
 
   return useQuery<[DeviceId, LightDevice][]>({
-    queryKey: ['devices', 'room', roomId],
-    queryFn: async () => {
-      if (!actor) {
-        throw new Error('Unable to connect to backend. Please check your connection.');
-      }
-      try {
-        const result = await withTimeout(
-          actor.getDevices(roomId),
-          10000,
-          'Loading devices is taking longer than expected. Please try again.'
-        );
-        if (!Array.isArray(result)) {
-          console.error('Invalid devices response:', result);
-          return [];
-        }
-        return result;
-      } catch (error) {
-        console.error('Error fetching devices:', error);
-        throw error;
-      }
-    },
-    enabled: !!actor && !isFetching,
-    staleTime: 10000,
-    retry: 2,
-  });
-}
-
-export function useGetAllDevices() {
-  const { actor, isFetching } = useActor();
-
-  return useQuery<[DeviceId, LightDevice][]>({
-    queryKey: ['devices', 'all'],
+    queryKey: ['allDevices'],
     queryFn: async () => {
       if (!actor) {
         throw new Error('Unable to connect to backend. Please check your connection.');
@@ -294,12 +276,61 @@ export function useGetAllDevices() {
         throw error;
       }
     },
-    enabled: !!actor && !isFetching,
+    enabled: options?.enabled !== false && !!actor && !isFetching,
     staleTime: 10000,
+    gcTime: 5 * 60 * 1000,
     retry: 2,
   });
 }
 
+export function useGetDevices(roomId: RoomId, options?: { enabled?: boolean }) {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<[DeviceId, LightDevice][]>({
+    queryKey: ['devices', roomId],
+    queryFn: async () => {
+      if (!actor) {
+        throw new Error('Unable to connect to backend. Please check your connection.');
+      }
+      try {
+        const result = await withTimeout(
+          actor.getDevices(roomId),
+          10000,
+          'Loading devices is taking longer than expected. Please try again.'
+        );
+        if (!Array.isArray(result)) {
+          console.error('Invalid devices response:', result);
+          return [];
+        }
+        return result;
+      } catch (error) {
+        console.error('Error fetching devices:', error);
+        throw error;
+      }
+    },
+    enabled: options?.enabled !== false && !!actor && !isFetching,
+    staleTime: 10000,
+    gcTime: 5 * 60 * 1000,
+    retry: 2,
+  });
+}
+
+// Alias for backward compatibility
+export const useGetDevicesByRoom = useGetDevices;
+
+// Device ID Generation
+export function useGenerateNextDeviceId() {
+  const { actor } = useActor();
+
+  return useMutation({
+    mutationFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.generateNextDeviceId();
+    },
+  });
+}
+
+// Device Mutations
 export function useToggleDevice() {
   const { actor } = useActor();
   const queryClient = useQueryClient();
@@ -311,9 +342,8 @@ export function useToggleDevice() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
+      queryClient.invalidateQueries({ queryKey: ['allDevices'] });
       queryClient.invalidateQueries({ queryKey: ['roomSwitchInfo'] });
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
-      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
     },
   });
 }
@@ -329,6 +359,7 @@ export function useSetBrightness() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
+      queryClient.invalidateQueries({ queryKey: ['allDevices'] });
     },
   });
 }
@@ -356,9 +387,8 @@ export function useCreateDevice() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
+      queryClient.invalidateQueries({ queryKey: ['allDevices'] });
       queryClient.invalidateQueries({ queryKey: ['roomSwitchInfo'] });
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
-      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
     },
   });
 }
@@ -374,14 +404,14 @@ export function useToggleAllDevicesInRoom() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
+      queryClient.invalidateQueries({ queryKey: ['allDevices'] });
       queryClient.invalidateQueries({ queryKey: ['roomSwitchInfo'] });
-      queryClient.invalidateQueries({ queryKey: ['rooms'] });
-      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
     },
   });
 }
 
-export function useGetRoomSwitchInfo(roomId: RoomId) {
+// Room Switch Info Query
+export function useGetRoomSwitchInfo(roomId: RoomId, options?: { enabled?: boolean }) {
   const { actor, isFetching } = useActor();
 
   return useQuery({
@@ -402,23 +432,21 @@ export function useGetRoomSwitchInfo(roomId: RoomId) {
         throw error;
       }
     },
-    enabled: !!actor && !isFetching,
-    staleTime: 5000,
+    enabled: options?.enabled !== false && !!actor && !isFetching,
+    staleTime: 10000,
+    gcTime: 5 * 60 * 1000,
     retry: 2,
   });
 }
 
+// Support Ticket Mutations
 export function useSubmitSupportTicket() {
   const { actor } = useActor();
-  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ subject, description }: { subject: string; description: string }) => {
       if (!actor) throw new Error('Actor not available');
       return actor.submitSupportTicket(subject, description);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['supportTicket'] });
     },
   });
 }

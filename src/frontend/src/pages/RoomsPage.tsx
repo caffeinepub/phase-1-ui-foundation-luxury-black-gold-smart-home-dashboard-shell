@@ -11,6 +11,7 @@ import { ProvisioningStateCard } from '../components/security/ProvisioningStateC
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { getStoredRoomsDisplayCount, setStoredRoomsDisplayCount, getStoredShowHiddenRooms, setStoredShowHiddenRooms } from '../utils/urlParams';
 import type { RoomInfo, RoomId } from '../backend';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface RoomsPageProps {
   onOpenRoomDetails: (roomId: RoomId) => void;
@@ -18,6 +19,7 @@ interface RoomsPageProps {
 
 export function RoomsPage({ onOpenRoomDetails }: RoomsPageProps) {
   const provisioningState = useAutoProvisionUser();
+  const queryClient = useQueryClient();
   
   // Restore display count from sessionStorage or default to 5
   const [displayCount, setDisplayCount] = useState(() => getStoredRoomsDisplayCount());
@@ -35,21 +37,44 @@ export function RoomsPage({ onOpenRoomDetails }: RoomsPageProps) {
   }, [showHidden]);
 
   // Fetch exactly N rooms (IDs 1 to displayCount) from backend
-  const { data: allRooms = [], isLoading: roomsLoading, error: roomsError, refetch, isFetching } = useGetRoomsForCount(
+  const { data: fetchedRooms = [], isLoading: roomsLoading, error: roomsError, refetch, isFetching } = useGetRoomsForCount(
     displayCount,
     {
       enabled: provisioningState.isSuccess,
     }
   );
 
+  // Create optimistic room list that always includes rooms 1..displayCount
+  const allRooms = useMemo(() => {
+    const roomsMap = new Map<RoomId, RoomInfo>();
+    
+    // First, add all fetched rooms
+    fetchedRooms.forEach(room => {
+      roomsMap.set(room.id, room);
+    });
+    
+    // Then, fill in any missing rooms with placeholders
+    for (let i = 1; i <= displayCount; i++) {
+      const roomId = i as RoomId;
+      if (!roomsMap.has(roomId)) {
+        roomsMap.set(roomId, {
+          id: roomId,
+          name: `Room ${roomId}`,
+          color: 'white',
+          isHidden: false,
+          isRunning: false,
+        });
+      }
+    }
+    
+    // Convert to array and sort by id
+    return Array.from(roomsMap.values()).sort((a, b) => a.id - b.id);
+  }, [fetchedRooms, displayCount]);
+
   // Filter rooms based on visibility setting
   const displayedRooms = useMemo(() => {
     if (!allRooms || allRooms.length === 0) return [];
-    
-    // Sort by room id to ensure consistent ordering
-    const sorted = [...allRooms].sort((a, b) => a.id - b.id);
-    
-    return sorted;
+    return allRooms;
   }, [allRooms]);
 
   // Filter for visible rooms only (for the hidden count badge)
@@ -76,12 +101,38 @@ export function RoomsPage({ onOpenRoomDetails }: RoomsPageProps) {
     provisioningState.retry();
   }, [provisioningState]);
 
-  const handleDisplayCountChange = useCallback((value: number) => {
-    setDisplayCount(value);
-  }, []);
+  const handleDisplayCountChange = useCallback((newCount: number) => {
+    // Pre-seed the cache with optimistic data
+    const previousRooms = queryClient.getQueryData<RoomInfo[]>(['roomsForCount', displayCount]) || [];
+    
+    // Create optimistic room list for the new count
+    const optimisticRooms: RoomInfo[] = [];
+    for (let i = 1; i <= newCount; i++) {
+      const roomId = i as RoomId;
+      const existingRoom = previousRooms.find(r => r.id === roomId);
+      
+      if (existingRoom) {
+        optimisticRooms.push(existingRoom);
+      } else {
+        optimisticRooms.push({
+          id: roomId,
+          name: `Room ${roomId}`,
+          color: 'white',
+          isHidden: false,
+          isRunning: false,
+        });
+      }
+    }
+    
+    // Pre-populate the cache for the new count
+    queryClient.setQueryData(['roomsForCount', newCount], optimisticRooms);
+    
+    // Update the display count
+    setDisplayCount(newCount);
+  }, [displayCount, queryClient]);
 
-  // Loading state during provisioning or rooms fetch
-  if (provisioningState.isLoading || (provisioningState.isSuccess && roomsLoading)) {
+  // Loading state during provisioning or initial rooms fetch
+  if (provisioningState.isLoading || (provisioningState.isSuccess && roomsLoading && !fetchedRooms.length)) {
     return <RoomsListSkeleton />;
   }
 
@@ -107,8 +158,8 @@ export function RoomsPage({ onOpenRoomDetails }: RoomsPageProps) {
     );
   }
 
-  // Rooms error state with retry (only show if provisioning succeeded)
-  if (provisioningState.isSuccess && roomsError) {
+  // Rooms error state with retry (only show if provisioning succeeded and no rooms at all)
+  if (provisioningState.isSuccess && roomsError && !fetchedRooms.length) {
     const errorMessage = roomsError instanceof Error ? roomsError.message : 'An unexpected error occurred while loading rooms.';
     
     return (
@@ -195,31 +246,7 @@ export function RoomsPage({ onOpenRoomDetails }: RoomsPageProps) {
         </CardContent>
       </GlassCard>
 
-      {/* Loading indicator when fetching new count */}
-      {isFetching && !roomsLoading && (
-        <div className="text-center py-4">
-          <p className="text-sm text-muted-foreground">Loading rooms...</p>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {!hasRooms && !isFetching && (
-        <GlassCard disableTilt>
-          <CardContent className="py-12">
-            <div className="flex flex-col items-center justify-center text-center space-y-4">
-              <DoorOpen className="h-16 w-16 text-muted-foreground" />
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">No Rooms Available</h3>
-                <p className="mt-2 text-sm text-muted-foreground max-w-md">
-                  Adjust the display count or visibility settings to see your rooms.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </GlassCard>
-      )}
-
-      {/* Rooms Grid */}
+      {/* Rooms Grid - always show if we have rooms */}
       {hasRooms && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {roomsToDisplay.map((room) => (

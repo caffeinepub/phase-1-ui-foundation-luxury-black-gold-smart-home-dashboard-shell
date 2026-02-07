@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Edit2, Check, X } from 'lucide-react';
 import { GlassCard } from '../effects/GlassCard';
 import { Button } from '../ui/button';
@@ -13,13 +13,21 @@ interface RoomTileProps {
 }
 
 /**
- * Simple rectangular RoomTile component that displays room id and room name with color-derived styling and inline editing for name and hex color with auto-generated default names.
+ * Simple rectangular RoomTile component that displays room id and room name with color-derived styling and inline editing for name and hex color with auto-generated default names from backend.
  */
 export function RoomTile({ room, onClick }: RoomTileProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(room.name);
   const [editColor, setEditColor] = useState(room.color);
   const updateSettings = useUpdateRoomSettings();
+
+  // Update local state when room prop changes
+  useEffect(() => {
+    if (!isEditing) {
+      setEditName(room.name);
+      setEditColor(room.color);
+    }
+  }, [room.name, room.color, isEditing]);
 
   // Use the room name from backend (which already has "Room N" as default)
   const displayName = room.name || `Room ${room.id}`;

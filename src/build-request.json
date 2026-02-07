@@ -1,70 +1,77 @@
 {
   "kind": "build_request",
-  "title": "Fix Rooms stepper so new room tiles appear immediately with auto-generated names",
-  "priority": "normal",
+  "title": "Fix Room Details page loading failure and ensure devices can be added to rooms reliably",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the Rooms page so that when the user increases the room count using the plus (+) control, a new room tile appears immediately in the main rooms grid (without requiring a page refresh).",
+      "text": "Improve Room Details page error handling so the page remains usable when backend calls fail (including the case where the backend canister is stopped) and provides a clear recovery path.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-4",
+          "msg-9",
+          "msg-11"
         ],
         "quotes": [
-          "المفروض في نفس اللحظه يظهر مربع جديد لاكن هو حاليا مش بيظهر ودا الغلط"
+          "بيحصل ايرور Failed to Load Room",
+          "عدله لكي تعمل الصفحة بشكل طبيعي",
+          "اصلح الكود ليجعل الصفحه تعمل واستطيع اضافة اجهزة داخل الغرف"
         ]
       },
       "acceptanceCriteria": [
-        "On Rooms page, clicking the + button increases the count and a corresponding additional RoomTile renders immediately in the grid.",
-        "The new tile appears without manual reload/navigation and without waiting for a long delay.",
-        "No regression: decreasing the count hides extra tiles accordingly."
+        "When getRoomInfo fails, the Room Details page shows an English error message that distinguishes backend-unavailable/canister-stopped style failures from generic failures (no raw CBOR or request dump shown to the user).",
+        "The error UI provides at least: (a) a 'Try Again' action that re-runs the query, and (b) a 'Back to Rooms' action that always works.",
+        "If the error appears to be a canister-stopped/unavailable scenario (e.g., reject code 5 / IC0508 in the error text), the UI includes concise English guidance (e.g., backend unavailable; try again later/reload) instead of only the raw error message.",
+        "No unhandled exceptions occur in RoomDetailsPage when room is null or query errors."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Ensure newly displayed rooms have an auto-generated default name in English using the format \"Room N\" (matching the room number/id), and that the name can be edited later using the existing room editing UI.",
+      "text": "Make adding devices to a room reliable by eliminating client-side timestamp-based device ID generation and replacing it with a backend-provided unique device ID allocation flow.",
       "target": "both",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-11"
         ],
         "quotes": [
-          "الاسم يتولد تلقائيا وانا لاحقا هتم تعديلة"
+          "اصلح الكود ليجعل الصفحه تعمل واستطيع اضافة اجهزة داخل الغرف"
         ]
       },
       "acceptanceCriteria": [
-        "When a new room becomes visible due to increasing the count, its displayed name is auto-generated as \"Room N\" (e.g., \"Room 6\").",
-        "The existing inline edit flow on RoomTile can rename the room and the updated name persists after refresh (stored via backend)."
+        "Backend: add a new public method that returns a unique DeviceId for the caller (e.g., by scanning existing device IDs for that user and selecting the next available value in the 0–255 range).",
+        "Backend: createDevice continues to work as-is, but the new ID allocation guarantees that repeated adds (including rapid bulk adds) do not collide with existing IDs for that user.",
+        "Frontend: CreateDeviceDialog and BulkAddDevicesDialog no longer use Date.now()%256 (or similar) to pick device IDs; they request IDs from the backend allocator before calling createDevice.",
+        "Bulk add allocates a fresh ID per device creation and successfully creates N devices in one operation without ID collisions.",
+        "If the allocator cannot provide an ID (e.g., user already has 256 devices), the frontend shows a clear English error and does not attempt to call createDevice with a guessed ID."
       ]
     },
     {
       "id": "REQ-3",
-      "text": "Ensure the React Query room-list data refreshes reliably when the display count changes (increment/decrement), so that the UI state and fetched data stay in sync.",
+      "text": "Ensure the Room Details device list updates immediately after adding devices so users can confirm devices were added to the selected room.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-1"
+          "msg-11"
         ],
         "quotes": [
-          "لما ازود غرف تظهرلها مربع باسمها"
+          "...واستطيع اضافة اجهزة داخل الغرف"
         ]
       },
       "acceptanceCriteria": [
-        "Changing the room count triggers a consistent update of the rooms list (no stale list that ignores the new count).",
-        "If a fetch is needed, the UI transitions cleanly (no permanent loading state; errors still show the existing retry UI)."
+        "After a successful add (single or bulk), the RoomDeviceListSection reflects the newly created devices without requiring a manual page refresh (via React Query invalidation/refetch already used by createDevice mutation, or an explicit refetch on dialog close).",
+        "After adding devices, the empty-state 'No Devices Yet' is replaced by the actual device cards for the room.",
+        "The add-device dialogs close on success and leave the Room Details page in a usable state (no stuck loading spinners)."
       ]
     }
   ],
   "constraints": [
-    "Do not edit any files under frontend/src/components/ui or any other paths listed as immutable in SYSTEM_CONTEXT.",
-    "Keep all Motoko logic in the single backend actor (backend/main.mo). Generate backend/migration.mo only if state schema changes are required (not expected for this fix).",
-    "Use English for any user-facing UI text introduced or modified by this change."
+    "Do not edit files under frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx, or anything in frontend/src/components/ui (compose existing components instead).",
+    "Backend must remain a single Motoko actor in backend/main.mo; only add migration.mo if a state upgrade is strictly required (it should not be for adding a new method)."
   ],
   "nonGoals": [
-    "Adding room icons or images inside the room tiles (tiles should remain name-focused as requested).",
-    "Introducing new authentication providers beyond Internet Identity.",
-    "Implementing advanced room details content on the Room Details page beyond the existing minimal view."
+    "Starting/stopping the canister programmatically from within the app (not possible from application code).",
+    "Adding third-party authentication or any external database."
   ],
   "imageRequirements": {
     "required": [],

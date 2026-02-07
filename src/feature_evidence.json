@@ -2,11 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-fix-the-rooms-page-so-that-when-the-user-increases-the-room-count-using-the-plus-control-a-new-room-tile-appears-immediately-in-the-main-rooms-grid-without-requiring-a-page-refresh",
-      "featureTitle": "Fix the Rooms page so that when the user increases the room count using the plus (+) control, a new room tile appears immediately in the main rooms grid (without requiring a page refresh).",
+      "featureId": "feature-improve-room-details-page-error-handling-so-the-page-remains-usable-when-backend-calls-fail-including-the-case-where-the-backend-canister-is-stopped-and-provides-a-clear-recovery-path",
+      "featureTitle": "Improve Room Details page error handling so the page remains usable when backend calls fail (including the case where the backend canister is stopped) and provides a clear recovery path.",
       "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/RoomsPage.tsx"
+        "frontend/src/pages/RoomDetailsPage.tsx",
+        "frontend/src/utils/backendAvailability.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -24,11 +24,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-ensure-newly-displayed-rooms-have-an-auto-generated-default-name-in-english-using-the-format-room-n-matching-the-room-number-id-and-that-the-name-can-be-edited-later-using-the-existing-room-editing-ui",
-      "featureTitle": "Ensure newly displayed rooms have an auto-generated default name in English using the format \"Room N\" (matching the room number/id), and that the name can be edited later using the existing room editing UI.",
+      "featureId": "feature-make-adding-devices-to-a-room-reliable-by-eliminating-client-side-timestamp-based-device-id-generation-and-replacing-it-with-a-backend-provided-unique-device-id-allocation-flow",
+      "featureTitle": "Make adding devices to a room reliable by eliminating client-side timestamp-based device ID generation and replacing it with a backend-provided unique device ID allocation flow.",
       "files": [
-        "frontend/src/components/rooms/RoomTile.tsx",
-        "frontend/src/pages/RoomsPage.tsx"
+        "frontend/src/components/rooms/BulkAddDevicesDialog.tsx",
+        "frontend/src/components/rooms/CreateDeviceDialog.tsx",
+        "frontend/src/hooks/useQueries.ts"
       ],
       "components": [
         "core-infrastructure@1.0.2",
@@ -46,11 +47,12 @@
       "confidence": "high"
     },
     {
-      "featureId": "feature-ensure-the-react-query-room-list-data-refreshes-reliably-when-the-display-count-changes-increment-decrement-so-that-the-ui-state-and-fetched-data-stay-in-sync",
-      "featureTitle": "Ensure the React Query room-list data refreshes reliably when the display count changes (increment/decrement), so that the UI state and fetched data stay in sync.",
+      "featureId": "feature-ensure-the-room-details-device-list-updates-immediately-after-adding-devices-so-users-can-confirm-devices-were-added-to-the-selected-room",
+      "featureTitle": "Ensure the Room Details device list updates immediately after adding devices so users can confirm devices were added to the selected room.",
       "files": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/RoomsPage.tsx"
+        "frontend/src/components/rooms/BulkAddDevicesDialog.tsx",
+        "frontend/src/components/rooms/CreateDeviceDialog.tsx",
+        "frontend/src/components/rooms/RoomDeviceListSection.tsx"
       ],
       "components": [
         "core-infrastructure@1.0.2",

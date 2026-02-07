@@ -54,6 +54,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'createRoom' : IDL.Func([RoomId, IDL.Text, IDL.Text, IDL.Bool], [], []),
+  'generateNextDeviceId' : IDL.Func([], [IDL.Nat8], []),
   'getAllDevices' : IDL.Func(
       [],
       [IDL.Vec(IDL.Tuple(DeviceId, LightDevice))],
@@ -155,6 +156,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'createRoom' : IDL.Func([RoomId, IDL.Text, IDL.Text, IDL.Bool], [], []),
+    'generateNextDeviceId' : IDL.Func([], [IDL.Nat8], []),
     'getAllDevices' : IDL.Func(
         [],
         [IDL.Vec(IDL.Tuple(DeviceId, LightDevice))],

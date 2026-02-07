@@ -132,6 +132,7 @@ export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createDevice(deviceId: DeviceId, name: string, roomId: RoomId, isOn: boolean, brightness: number): Promise<void>;
     createRoom(roomId: RoomId, name: string, color: string, isHidden: boolean): Promise<void>;
+    generateNextDeviceId(): Promise<number>;
     getAllDevices(): Promise<Array<[DeviceId, LightDevice]>>;
     getAllRoomSummaries(): Promise<Array<RoomInfo>>;
     getAllRooms(): Promise<Array<RoomInfo>>;
@@ -229,6 +230,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.createRoom(arg0, arg1, arg2, arg3);
+            return result;
+        }
+    }
+    async generateNextDeviceId(): Promise<number> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.generateNextDeviceId();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.generateNextDeviceId();
             return result;
         }
     }

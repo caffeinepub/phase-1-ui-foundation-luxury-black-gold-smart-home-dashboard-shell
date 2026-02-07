@@ -6,7 +6,9 @@ import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
+import Migration "migration";
 
+(with migration = Migration.run)
 actor {
   // Initialize access control state
   let accessControlState = AccessControl.initState();
@@ -82,13 +84,22 @@ actor {
   // Tracking room count per user
   let userRoomCounts = Map.empty<Principal, Nat>();
 
+  let nextDeviceId = Map.empty<Principal, Nat8>();
+
   // Auto-provision user role for new authenticated principals
+  // Note: This function allows self-registration. If stricter control is needed,
+  // an admin must manually assign roles using the assignRole function from MixinAuthorization
   public shared ({ caller }) func initializeAccess() : async () {
     if (caller.isAnonymous()) {
       Runtime.trap("Anonymous principals cannot initialize access");
     };
 
-    if (AccessControl.getUserRole(accessControlState, caller) == #guest) {
+    // Check if user already has a role assigned
+    let currentRole = AccessControl.getUserRole(accessControlState, caller);
+    if (currentRole == #guest) {
+      // Self-assign user role for new users
+      // This is the only place where non-admins can call assignRole
+      // and only for themselves
       AccessControl.assignRole(accessControlState, caller, caller, #user);
     };
 
@@ -149,7 +160,9 @@ actor {
   };
 
   public shared ({ caller }) func setRoomCount(count : Nat) : async () {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can set room count");
+    };
     if (count > 100) {
       Runtime.trap("Room count cannot exceed 100");
     };
@@ -157,7 +170,9 @@ actor {
   };
 
   public query ({ caller }) func getRoomCount() : async Nat {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get room count");
+    };
     switch (userRoomCounts.get(caller)) {
       case (?count) { count };
       case (null) { 5 }; // Default to 5 if not set
@@ -165,7 +180,9 @@ actor {
   };
 
   public query ({ caller }) func getRoomsForCount(count : Nat) : async [RoomInfo] {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get rooms");
+    };
     if (count == 0 or count > 100) {
       Runtime.trap("Invalid room count");
     };
@@ -192,7 +209,9 @@ actor {
   };
 
   public query ({ caller }) func getAllRoomSummaries() : async [RoomInfo] {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get room summaries");
+    };
     let rooms = getUserRoomsMap(caller);
     rooms.values().toArray().map<Room, RoomInfo>(
       func(r) { r }
@@ -200,7 +219,9 @@ actor {
   };
 
   public query ({ caller }) func getRoomSummariesRange(fromIndex : Nat, toIndex : Nat) : async [RoomInfo] {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get room summaries");
+    };
     let rooms = getUserRoomsMap(caller);
     let allRooms = rooms.values().toArray();
     getSlice(allRooms, fromIndex, toIndex);
@@ -225,14 +246,18 @@ actor {
   };
 
   public shared ({ caller }) func createRoom(roomId : RoomId, name : Text, color : Text, isHidden : Bool) : async () {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can create rooms");
+    };
     let rooms = getUserRoomsMap(caller);
     let newRoom = { id = roomId; name; color; isHidden; isRunning = false };
     rooms.add(roomId, newRoom);
   };
 
   public shared ({ caller }) func toggleRoomRunningState(roomId : RoomId) : async Bool {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can toggle room state");
+    };
     let rooms = getUserRoomsMap(caller);
 
     switch (rooms.get(roomId)) {
@@ -249,7 +274,9 @@ actor {
   };
 
   public shared ({ caller }) func updateRoomSettings(roomId : RoomId, name : Text, color : Text) : async () {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can update room settings");
+    };
     let rooms = getUserRoomsMap(caller);
 
     switch (rooms.get(roomId)) {
@@ -262,7 +289,9 @@ actor {
   };
 
   public shared ({ caller }) func setRoomHidden(roomId : RoomId, isHidden : Bool) : async () {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can set room visibility");
+    };
     let rooms = getUserRoomsMap(caller);
 
     switch (rooms.get(roomId)) {
@@ -275,7 +304,9 @@ actor {
   };
 
   public shared ({ caller }) func setRoomRunning(roomId : RoomId, isRunning : Bool) : async () {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can set room running state");
+    };
     let rooms = getUserRoomsMap(caller);
 
     switch (rooms.get(roomId)) {
@@ -288,7 +319,9 @@ actor {
   };
 
   public query ({ caller }) func getAllRooms() : async [RoomInfo] {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get all rooms");
+    };
     let rooms = getUserRoomsMap(caller);
     rooms.values().toArray().map<Room, RoomInfo>(
       func(room) {
@@ -304,7 +337,9 @@ actor {
   };
 
   public query ({ caller }) func getRoomInfo(roomId : RoomId) : async ?RoomInfo {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get room info");
+    };
     let rooms = getUserRoomsMap(caller);
 
     switch (rooms.get(roomId)) {
@@ -321,8 +356,27 @@ actor {
     };
   };
 
+  public shared ({ caller }) func generateNextDeviceId() : async Nat8 {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can generate device IDs");
+    };
+    let newId : Nat8 = switch (nextDeviceId.get(caller)) {
+      case (null) { 0 };
+      case (?lastId) {
+        if (lastId == 255) {
+          Runtime.trap("Maximum device ID limit reached. Consider reusing device IDs since the system assigns the next available ID automatically.");
+        };
+        Nat8.fromNat(lastId.toNat() + 1);
+      };
+    };
+    nextDeviceId.add(caller, newId);
+    newId;
+  };
+
   public shared ({ caller }) func createDevice(deviceId : DeviceId, name : Text, roomId : RoomId, isOn : Bool, brightness : Nat8) : async () {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can create devices");
+    };
     let devices = getUserDevicesMap(caller);
     let newDevice = {
       name;
@@ -334,7 +388,9 @@ actor {
   };
 
   public query ({ caller }) func getAllDevices() : async [(DeviceId, LightDevice)] {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get devices");
+    };
     let devices = getUserDevicesMap(caller);
     devices.toArray().sort(
       func(a, b) {
@@ -344,7 +400,9 @@ actor {
   };
 
   public query ({ caller }) func getDevices(roomId : RoomId) : async [(DeviceId, LightDevice)] {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get devices");
+    };
     let devices = getUserDevicesMap(caller);
 
     devices.filter(func(_id, device) { device.roomId == roomId }).toArray().sort(
@@ -353,7 +411,9 @@ actor {
   };
 
   public shared ({ caller }) func toggleDevice(deviceId : DeviceId) : async Bool {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can toggle devices");
+    };
     let devices = getUserDevicesMap(caller);
 
     switch (devices.get(deviceId)) {
@@ -367,7 +427,9 @@ actor {
   };
 
   public shared ({ caller }) func setBrightness(deviceId : DeviceId, brightness : Nat8) : async Bool {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can set brightness");
+    };
     let devices = getUserDevicesMap(caller);
 
     switch (devices.get(deviceId)) {
@@ -381,7 +443,9 @@ actor {
   };
 
   public shared ({ caller }) func toggleAllDevicesInRoom(roomId : RoomId, turnOn : Bool) : async Bool {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can toggle devices");
+    };
     let devices = getUserDevicesMap(caller);
 
     let filteredDevices = devices.filter(func(_id, device) { device.roomId == roomId });
@@ -394,7 +458,9 @@ actor {
   };
 
   public query ({ caller }) func getRoomSwitchInfo(roomId : RoomId) : async ?RoomSwitchInfo {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get room switch info");
+    };
     let rooms = getUserRoomsMap(caller);
     let devices = getUserDevicesMap(caller);
 
@@ -413,17 +479,23 @@ actor {
   };
 
   public shared ({ caller }) func addOrUpdateSensors(roomId : RoomId, temperature : Float, humidity : Float) : async () {
-    _assertAdmin(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can manage sensors");
+    };
     Runtime.trap("Sensor management has been moved to the frontend");
   };
 
   public query ({ caller }) func getRoomSensorStats(roomId : RoomId) : async ?SensorStats {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can get sensor stats");
+    };
     Runtime.trap("Sensor management has been moved to the frontend");
   };
 
   public shared ({ caller }) func submitSupportTicket(subject : Text, description : Text) : async () {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can submit support tickets");
+    };
 
     let newTicket : SupportTicket = {
       createdBy = caller;
@@ -436,7 +508,9 @@ actor {
   };
 
   public query ({ caller }) func getSupportTicket(user : Principal) : async ?SupportTicket {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view support tickets");
+    };
     if (caller != user and not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Can only view your own support ticket");
     };
@@ -444,7 +518,9 @@ actor {
   };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
-    _assertUser(caller);
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view profiles");
+    };
     userProfiles.get(caller);
   };
 
@@ -456,19 +532,9 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    _assertUser(caller);
-    userProfiles.add(caller, profile);
-  };
-
-  func _assertAdmin(caller : Principal) {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Must have admin role");
-    };
-  };
-
-  func _assertUser(caller : Principal) {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Must have user role");
+      Runtime.trap("Unauthorized: Only users can save profiles");
     };
+    userProfiles.add(caller, profile);
   };
 };

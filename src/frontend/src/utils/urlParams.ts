@@ -1,6 +1,5 @@
 /**
- * Utility functions for parsing and managing URL parameters
- * Works with both hash-based and browser-based routing
+ * Utility functions for parsing and managing URL parameters, sessionStorage operations, secret parameter handling, and rooms page state management functions (display count and show hidden rooms preference) with validation and default values.
  */
 
 /**
@@ -207,25 +206,22 @@ export function getSecretParameter(paramName: string): string | null {
     return getSecretFromHash(paramName);
 }
 
-// Rooms page state management
+// Rooms page state management functions
+
 const ROOMS_DISPLAY_COUNT_KEY = 'roomsDisplayCount';
 const SHOW_HIDDEN_ROOMS_KEY = 'showHiddenRooms';
 
 /**
  * Gets the stored rooms display count from sessionStorage
- * @returns The stored count or default value of 5
+ * @returns The stored count (1-100) or default value of 5
  */
 export function getStoredRoomsDisplayCount(): number {
-    try {
-        const stored = sessionStorage.getItem(ROOMS_DISPLAY_COUNT_KEY);
-        if (stored) {
-            const parsed = parseInt(stored, 10);
-            if (!isNaN(parsed) && parsed >= 1 && parsed <= 100) {
-                return parsed;
-            }
+    const stored = getSessionParameter(ROOMS_DISPLAY_COUNT_KEY);
+    if (stored) {
+        const parsed = parseInt(stored, 10);
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= 100) {
+            return parsed;
         }
-    } catch (error) {
-        console.warn('Failed to retrieve rooms display count:', error);
     }
     return 5; // Default value
 }
@@ -235,12 +231,8 @@ export function getStoredRoomsDisplayCount(): number {
  * @param count - The count to store (1-100)
  */
 export function setStoredRoomsDisplayCount(count: number): void {
-    try {
-        if (count >= 1 && count <= 100) {
-            sessionStorage.setItem(ROOMS_DISPLAY_COUNT_KEY, count.toString());
-        }
-    } catch (error) {
-        console.warn('Failed to store rooms display count:', error);
+    if (count >= 1 && count <= 100) {
+        storeSessionParameter(ROOMS_DISPLAY_COUNT_KEY, count.toString());
     }
 }
 
@@ -249,13 +241,9 @@ export function setStoredRoomsDisplayCount(count: number): void {
  * @returns The stored preference or default value of false
  */
 export function getStoredShowHiddenRooms(): boolean {
-    try {
-        const stored = sessionStorage.getItem(SHOW_HIDDEN_ROOMS_KEY);
-        if (stored !== null) {
-            return stored === 'true';
-        }
-    } catch (error) {
-        console.warn('Failed to retrieve show hidden rooms preference:', error);
+    const stored = getSessionParameter(SHOW_HIDDEN_ROOMS_KEY);
+    if (stored !== null) {
+        return stored === 'true';
     }
     return false; // Default value
 }
@@ -265,9 +253,5 @@ export function getStoredShowHiddenRooms(): boolean {
  * @param show - Whether to show hidden rooms
  */
 export function setStoredShowHiddenRooms(show: boolean): void {
-    try {
-        sessionStorage.setItem(SHOW_HIDDEN_ROOMS_KEY, show.toString());
-    } catch (error) {
-        console.warn('Failed to store show hidden rooms preference:', error);
-    }
+    storeSessionParameter(SHOW_HIDDEN_ROOMS_KEY, show.toString());
 }

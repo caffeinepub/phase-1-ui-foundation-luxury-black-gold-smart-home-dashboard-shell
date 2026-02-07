@@ -49,6 +49,7 @@ export interface _SERVICE {
     undefined
   >,
   'createRoom' : ActorMethod<[RoomId, string, string, boolean], undefined>,
+  'generateNextDeviceId' : ActorMethod<[], number>,
   'getAllDevices' : ActorMethod<[], Array<[DeviceId, LightDevice]>>,
   'getAllRoomSummaries' : ActorMethod<[], Array<RoomInfo>>,
   'getAllRooms' : ActorMethod<[], Array<RoomInfo>>,

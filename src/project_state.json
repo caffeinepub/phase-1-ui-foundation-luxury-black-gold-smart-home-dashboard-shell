@@ -1,35 +1,35 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "App includes a rooms feature: when a user adds a room, a new room card (name only) should appear immediately in the main rooms list, with the room name auto-generated (e.g., Room 1, Room 2) and editable later.",
+  "summary": "Room page currently fails to load due to stopped IC canister; user wants code fixed so the room page works normally and supports adding devices inside rooms.",
   "architectural_notes": [
-    "Room creation should auto-generate default names sequentially (e.g., Room 1, Room 2) and support later renaming.",
-    "Rooms list UI should update immediately on add (optimistic UI/state update) to show the new room card without requiring reload."
+    "App relies on Internet Computer canister method getRoomInfo; failures occur when the target canister is stopped (Reject code 5 / IC0508).",
+    "Frontend should handle canister-stopped/unavailable errors gracefully to keep room page usable."
   ],
   "known_issues": [
-    "Bug: Adding a room does not show the new room card immediately in the rooms list (expected to appear instantly)."
+    "Room page error: \"Failed to Load Room\" when calling getRoomInfo because canister p3v6c-cqaaa-aaaab-aalga-cai is stopped (Reject code 5, IC0508)."
   ],
   "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-fix-the-rooms-page-so-that-when-the-user-increases-the-room-count-using-the-plus-control-a-new-room-tile-appears-immediately-in-the-main-rooms-grid-without-requiring-a-page-refresh",
-      "title": "Fix the Rooms page so that when the user increases the room count using the plus (+) control, a new room tile appears immediately in the main rooms grid (without requiring a page refresh).",
+      "id": "feature-improve-room-details-page-error-handling-so-the-page-remains-usable-when-backend-calls-fail-including-the-case-where-the-backend-canister-is-stopped-and-provides-a-clear-recovery-path",
+      "title": "Improve Room Details page error handling so the page remains usable when backend calls fail (including the case where the backend canister is stopped) and provides a clear recovery path.",
       "reqIds": [
         "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-ensure-newly-displayed-rooms-have-an-auto-generated-default-name-in-english-using-the-format-room-n-matching-the-room-number-id-and-that-the-name-can-be-edited-later-using-the-existing-room-editing-ui",
-      "title": "Ensure newly displayed rooms have an auto-generated default name in English using the format \"Room N\" (matching the room number/id), and that the name can be edited later using the existing room editing UI.",
+      "id": "feature-make-adding-devices-to-a-room-reliable-by-eliminating-client-side-timestamp-based-device-id-generation-and-replacing-it-with-a-backend-provided-unique-device-id-allocation-flow",
+      "title": "Make adding devices to a room reliable by eliminating client-side timestamp-based device ID generation and replacing it with a backend-provided unique device ID allocation flow.",
       "reqIds": [
         "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-ensure-the-react-query-room-list-data-refreshes-reliably-when-the-display-count-changes-increment-decrement-so-that-the-ui-state-and-fetched-data-stay-in-sync",
-      "title": "Ensure the React Query room-list data refreshes reliably when the display count changes (increment/decrement), so that the UI state and fetched data stay in sync.",
+      "id": "feature-ensure-the-room-details-device-list-updates-immediately-after-adding-devices-so-users-can-confirm-devices-were-added-to-the-selected-room",
+      "title": "Ensure the Room Details device list updates immediately after adding devices so users can confirm devices were added to the selected room.",
       "reqIds": [
         "REQ-3"
       ],
@@ -39,12 +39,12 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "When adding a room, immediately display a new room card (name only) in the main rooms list; auto-generate the room name (e.g., Room 1, Room 2) with ability to edit later.",
+      "summary": "Enable adding devices inside rooms from the room page.",
       "reqIds": [],
       "status": "pending"
     }
   ],
-  "projectName": "Fix Rooms stepper so new room tiles appear immediately with auto-generated names",
+  "projectName": "Fix Room Details page loading failure and ensure devices can be added to rooms reliably",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

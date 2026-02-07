@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,204 +12,183 @@ import {
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import { Switch } from '../ui/switch';
-import { Slider } from '../ui/slider';
-import { useCreateDevice, useGetAllDevices } from '../../hooks/useQueries';
+import { useCreateDevice, useGenerateNextDeviceId } from '../../hooks/useQueries';
 import { useAutoProvisionUser } from '../../hooks/useAutoProvisionUser';
-import { classifyAuthError } from '../../utils/authErrors';
 import { AccessIssueCallout } from '../security/AccessIssueCallout';
+import { classifyAuthError } from '../../utils/authErrors';
 import type { RoomId } from '../../backend';
 
 interface CreateDeviceDialogProps {
   roomId: RoomId;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onSuccess?: () => void;
 }
 
-export function CreateDeviceDialog({ roomId }: CreateDeviceDialogProps) {
-  const [open, setOpen] = useState(false);
+/**
+ * Device creation dialog with backend-allocated device IDs, authorization error handling, retry provisioning support, and optional success callback for immediate parent refetch.
+ */
+export function CreateDeviceDialog({ roomId, open: controlledOpen, onOpenChange, onSuccess }: CreateDeviceDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
   const [deviceName, setDeviceName] = useState('');
-  const [isOn, setIsOn] = useState(false);
-  const [brightness, setBrightness] = useState([128]);
-  const [error, setError] = useState('');
-  const [authError, setAuthError] = useState<{ message: string; suggestRetry: boolean } | null>(null);
-  const [pendingSubmit, setPendingSubmit] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [idAllocationError, setIdAllocationError] = useState<string | null>(null);
+  const [shouldRetryAfterProvision, setShouldRetryAfterProvision] = useState(false);
 
   const createDevice = useCreateDevice();
-  const { data: allDevices = [] } = useGetAllDevices();
+  const generateDeviceId = useGenerateNextDeviceId();
   const provisioningState = useAutoProvisionUser();
 
-  // Auto-retry submission after successful provisioning
+  const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setIsOpen = onOpenChange || setInternalOpen;
+
+  // Reset form when dialog closes
   useEffect(() => {
-    if (pendingSubmit && provisioningState.isSuccess && !provisioningState.isLoading) {
-      setPendingSubmit(false);
+    if (!isOpen) {
+      setDeviceName('');
       setAuthError(null);
-      // Retry the submission
-      handleSubmitInternal();
+      setIdAllocationError(null);
+      setShouldRetryAfterProvision(false);
     }
-  }, [provisioningState.isSuccess, provisioningState.isLoading, pendingSubmit]);
+  }, [isOpen]);
 
-  const handleSubmitInternal = async () => {
-    setError('');
+  // Auto-retry after successful provisioning
+  useEffect(() => {
+    if (shouldRetryAfterProvision && provisioningState.isSuccess && deviceName.trim()) {
+      setShouldRetryAfterProvision(false);
+      handleCreateDevice();
+    }
+  }, [shouldRetryAfterProvision, provisioningState.isSuccess]);
+
+  const handleCreateDevice = async () => {
+    if (!deviceName.trim()) return;
+
     setAuthError(null);
-
-    // Validation
-    if (!deviceName.trim()) {
-      setError('Device name is required');
-      return;
-    }
-
-    if (deviceName.trim().length < 2) {
-      setError('Device name must be at least 2 characters');
-      return;
-    }
-
-    if (deviceName.trim().length > 50) {
-      setError('Device name must be less than 50 characters');
-      return;
-    }
-
-    // Find next available device ID
-    const usedIds = new Set(allDevices.map(([id]) => id));
-    let nextDeviceId = 0;
-    while (usedIds.has(nextDeviceId)) {
-      nextDeviceId++;
-      if (nextDeviceId > 255) {
-        setError('Maximum number of devices reached (256)');
-        return;
-      }
-    }
+    setIdAllocationError(null);
 
     try {
+      // Request backend-allocated device ID
+      const deviceId = await generateDeviceId.mutateAsync();
+
       await createDevice.mutateAsync({
-        deviceId: nextDeviceId,
+        deviceId,
         name: deviceName.trim(),
         roomId,
-        isOn,
-        brightness: brightness[0],
+        isOn: false,
+        brightness: 100,
       });
-      setDeviceName('');
-      setIsOn(false);
-      setBrightness([128]);
-      setOpen(false);
-    } catch (err: any) {
-      const authErrorInfo = classifyAuthError(err);
+
+      // Call success callback if provided
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      setIsOpen(false);
+    } catch (error: any) {
+      console.error('Failed to create device:', error);
       
-      if (authErrorInfo.isAuthError && authErrorInfo.suggestRetryProvisioning) {
-        setAuthError({
-          message: authErrorInfo.message,
-          suggestRetry: true,
-        });
-        setPendingSubmit(true);
-      } else {
-        setError(authErrorInfo.message || 'Failed to create device. Please try again.');
+      // Check if it's an ID allocation error
+      if (error.message && error.message.includes('Maximum device ID limit')) {
+        setIdAllocationError('You have reached the maximum number of devices (256). Please delete some devices before adding new ones.');
+        return;
+      }
+
+      const errorClassification = classifyAuthError(error);
+      if (errorClassification.isAuthError) {
+        setAuthError(errorClassification.message);
+        if (errorClassification.suggestRetryProvisioning) {
+          setShouldRetryAfterProvision(true);
+        }
       }
     }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await handleSubmitInternal();
-  };
-
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      setDeviceName('');
-      setIsOn(false);
-      setBrightness([128]);
-      setError('');
-      setAuthError(null);
-      setPendingSubmit(false);
-    }
-    setOpen(newOpen);
   };
 
   const handleRetryComplete = () => {
-    // Provisioning completed, form will auto-retry via useEffect
+    // Provisioning retry completed successfully, form will auto-submit via useEffect
   };
 
+  const isCreating = createDevice.isPending || generateDeviceId.isPending;
+  const isValid = deviceName.trim().length >= 2 && deviceName.trim().length <= 50;
+
+  const triggerButton = (
+    <Button variant="outline" className="gap-2 shadow-gold-glow-sm">
+      <Plus className="h-4 w-4" />
+      Add Device
+    </Button>
+  );
+
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button size="sm" className="gap-2 shadow-gold-glow-sm">
-          <Plus className="h-4 w-4" />
-          Add Device
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle>Add New Device</DialogTitle>
-            <DialogDescription>
-              Add a new smart device to this room.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {authError && authError.suggestRetry && (
-              <AccessIssueCallout
-                message={authError.message}
-                onRetryComplete={handleRetryComplete}
-              />
-            )}
-            <div className="grid gap-2">
-              <Label htmlFor="device-name">Device Name</Label>
-              <Input
-                id="device-name"
-                placeholder="e.g., Ceiling Light, Floor Lamp"
-                value={deviceName}
-                onChange={(e) => setDeviceName(e.target.value)}
-                disabled={createDevice.isPending || pendingSubmit}
-              />
-            </div>
-            <div className="flex items-center justify-between rounded-lg border border-border p-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="device-power">Power</Label>
-                <p className="text-xs text-muted-foreground">
-                  Turn device on by default
-                </p>
-              </div>
-              <Switch
-                id="device-power"
-                checked={isOn}
-                onCheckedChange={setIsOn}
-                disabled={createDevice.isPending || pendingSubmit}
-              />
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="device-brightness">Brightness</Label>
-                <span className="text-sm text-muted-foreground">
-                  {Math.round((brightness[0] / 255) * 100)}%
-                </span>
-              </div>
-              <Slider
-                id="device-brightness"
-                value={brightness}
-                onValueChange={setBrightness}
-                max={255}
-                step={1}
-                disabled={createDevice.isPending || pendingSubmit}
-                className="w-full"
-              />
-            </div>
-            {error && !authError && <p className="text-sm text-destructive">{error}</p>}
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      {!controlledOpen && <DialogTrigger asChild>{triggerButton}</DialogTrigger>}
+      <DialogContent className="sm:max-w-md glass-surface border-border">
+        <DialogHeader>
+          <DialogTitle>Add New Device</DialogTitle>
+          <DialogDescription>
+            Create a new device in this room. Enter a name for the device.
+          </DialogDescription>
+        </DialogHeader>
+
+        {authError && (
+          <AccessIssueCallout
+            message={authError}
+            onRetryComplete={handleRetryComplete}
+          />
+        )}
+
+        {idAllocationError && (
+          <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
+            <p className="text-sm text-destructive">{idAllocationError}</p>
           </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={createDevice.isPending || pendingSubmit}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={createDevice.isPending || pendingSubmit}
-              className="shadow-gold-glow-sm"
-            >
-              {createDevice.isPending || pendingSubmit ? 'Adding...' : 'Add Device'}
-            </Button>
-          </DialogFooter>
-        </form>
+        )}
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="device-name">Device Name</Label>
+            <Input
+              id="device-name"
+              placeholder="e.g., Ceiling Light"
+              value={deviceName}
+              onChange={(e) => setDeviceName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && isValid && !isCreating) {
+                  handleCreateDevice();
+                }
+              }}
+              disabled={isCreating}
+              maxLength={50}
+            />
+            <p className="text-xs text-muted-foreground">
+              {deviceName.length}/50 characters (minimum 2)
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => setIsOpen(false)}
+            disabled={isCreating}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleCreateDevice}
+            disabled={!isValid || isCreating}
+            className="gap-2 shadow-gold-glow-sm"
+          >
+            {isCreating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4" />
+                Create Device
+              </>
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

@@ -1,43 +1,56 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T21:41:23.109Z",
-  "summary": "Frontend changes introduce a new React Query hook keyed by room display count and update RoomsPage/RoomTile to use it, which likely improves refetch behavior when the count changes and provides a fallback display name. However, the diff does not show any backend implementation for auto-generating/persisting default room names, and includes several unrelated UI/feature additions (not requested) in RoomDashboard and URL/session persistence helpers.",
+  "generatedAt": "2026-02-07T23:29:48.907Z",
+  "summary": "REQ-1 appears implemented on RoomDetailsPage via sanitized, user-friendly error handling with retry/back actions and special handling for canister-unavailable patterns. REQ-3 appears implemented by wiring add-device dialogs to trigger device-list refetch/invalidation on success. REQ-2 is partially evidenced on the frontend (dialogs now request backend-generated IDs), but the backend-side unique ID allocation method/logic is not visible in the provided backend diff snippet, and a migration file was added despite the constraint that it should not be required for a new method.",
   "missing_requirements": [
     {
       "id": "REQ-2",
-      "requirement": "Ensure newly displayed rooms have an auto-generated default name in English using the format \"Room N\" (matching the room number/id), and that the name can be edited later using the existing room editing UI (persisted via backend).",
-      "reason": "RoomTile adds a UI fallback `room.name || `Room ${room.id}``, but the requirement/AC calls for an auto-generated default name stored via backend so it persists after refresh. The diff contains no backend (Motoko) changes or evidence that `getRoomsForCount`/room creation ensures `room.name` is set to \"Room N\" and persisted.",
+      "requirement": "Backend: add a new public method that returns a unique DeviceId for the caller by scanning existing device IDs for that user and selecting the next available value in the 0–255 range (and reliably avoids collisions for rapid/bulk adds).",
+      "reason": "backend/main.mo is truncated and the diff summary does not show any new public allocator method implementation nor the described scan/next-available logic; only a new nextDeviceId map and a migration adding it are visible.",
       "evidence": [
-        "frontend/src/components/rooms/RoomTile.tsx",
-        "frontend/src/hooks/useQueries.ts"
+        "backend/main.mo (truncated)",
+        "backend/migration.mo"
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "requirement": "If the allocator cannot provide an ID (e.g., user already has 256 devices), the frontend shows a clear English error and does not attempt to call createDevice with a guessed ID.",
+      "reason": "Frontend dialogs handle an error string containing 'Maximum device ID limit', but the diff does not show the backend allocator actually returning that specific error (or any defined error contract). With only the truncated diff, it's not verifiable that the allocator failure is correctly surfaced and matched by the UI in all cases.",
+      "evidence": [
+        "frontend/src/components/rooms/CreateDeviceDialog.tsx (truncated)",
+        "frontend/src/components/rooms/BulkAddDevicesDialog.tsx (truncated)"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Added device statistics and electricity consumption calculations and expanded loading/error UI in RoomDashboard.",
-      "reason": "The BuildRequest is narrowly about Rooms stepper/count behavior and default room naming; it does not request new dashboard statistics, energy usage calculations, or enhanced device-loading error UI.",
+      "description": "Added backend state migration introducing nextDeviceId stable-state upgrade path (migration.mo) even though the build request constraints say migration.mo should only be added if a state upgrade is strictly required (and notes it should not be for adding a new method).",
+      "reason": "REQ-2 asked for a new public method to allocate IDs (which should not require a state migration per constraints), but the diff adds backend/migration.mo and wires it into backend/main.mo.",
       "evidence": [
-        "frontend/src/components/rooms/RoomDashboard.tsx"
+        "backend/migration.mo",
+        "backend/main.mo (with migration = Migration.run)"
       ]
     },
     {
-      "description": "Persisting Rooms display count and hidden-room preference via sessionStorage and adding related URL/session helper functionality.",
-      "reason": "Persistence of display count/showHidden is not requested by REQ-1/2/3; it is extra behavior beyond ensuring immediate tile appearance and reliable refetch on count change.",
+      "description": "Expanded/modified URL parameter and sessionStorage utilities covering secret parameter handling and rooms page state management (unrelated to Room Details error handling or device ID allocation).",
+      "reason": "Not requested by REQ-1/REQ-2/REQ-3; appears to be unrelated scope.",
       "evidence": [
-        "frontend/src/pages/RoomsPage.tsx",
-        "frontend/src/utils/urlParams.ts"
+        "frontend/src/utils/urlParams.ts (truncated)"
       ]
     }
   ],
-  "confidence": 0.62,
+  "confidence": 0.6,
   "changed_files": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/rooms/RoomDashboard.tsx",
-    "frontend/src/components/rooms/RoomTile.tsx",
+    "frontend/src/components/rooms/BulkAddDevicesDialog.tsx",
+    "frontend/src/components/rooms/CreateDeviceDialog.tsx",
+    "frontend/src/components/rooms/RoomDeviceListSection.tsx",
     "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/RoomsPage.tsx",
+    "frontend/src/pages/RoomDetailsPage.tsx",
+    "frontend/src/utils/backendAvailability.ts",
     "frontend/src/utils/urlParams.ts",
     "project_state.json"
   ]

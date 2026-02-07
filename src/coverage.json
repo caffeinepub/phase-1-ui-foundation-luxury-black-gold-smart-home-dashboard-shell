@@ -1,7 +1,7 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T21:41:23.111Z",
+  "generatedAt": "2026-02-07T23:29:48.910Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
@@ -12,54 +12,66 @@
     "items": [
       {
         "id": "REQ-1",
-        "summary": "Fix the Rooms page so that when the user increases the room count using the plus (+) control, a new room tile appears immediately in the main rooms grid (without requiring a page refresh).",
+        "summary": "Improve Room Details page error handling so the page remains usable when backend calls fail (including the case where the backend canister is stopped) and provides a clear recovery path.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/RoomsPage.tsx",
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/utils/backendAvailability.ts",
+          "frontend/src/pages/RoomDetailsPage.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/RoomsPage.tsx",
-          "frontend/src/hooks/useQueries.ts"
+          "frontend/src/utils/backendAvailability.ts",
+          "frontend/src/pages/RoomDetailsPage.tsx"
         ]
       },
       {
         "id": "REQ-2",
-        "summary": "Ensure newly displayed rooms have an auto-generated default name in English using the format \"Room N\" (matching the room number/id), and that the name can be edited later using the existing room editing UI.",
+        "summary": "Make adding devices to a room reliable by eliminating client-side timestamp-based device ID generation and replacing it with a backend-provided unique device ID allocation flow.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/rooms/RoomTile.tsx",
-          "frontend/src/pages/RoomsPage.tsx"
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/rooms/CreateDeviceDialog.tsx",
+          "frontend/src/components/rooms/BulkAddDevicesDialog.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/rooms/RoomTile.tsx",
-          "frontend/src/pages/RoomsPage.tsx"
+          "frontend/src/hooks/useQueries.ts",
+          "frontend/src/components/rooms/CreateDeviceDialog.tsx",
+          "frontend/src/components/rooms/BulkAddDevicesDialog.tsx"
         ]
       },
       {
         "id": "REQ-3",
-        "summary": "Ensure the React Query room-list data refreshes reliably when the display count changes (increment/decrement), so that the UI state and fetched data stay in sync.",
+        "summary": "Ensure the Room Details device list updates immediately after adding devices so users can confirm devices were added to the selected room.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/RoomsPage.tsx"
+          "frontend/src/components/rooms/CreateDeviceDialog.tsx",
+          "frontend/src/components/rooms/BulkAddDevicesDialog.tsx",
+          "frontend/src/components/rooms/RoomDeviceListSection.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useQueries.ts",
-          "frontend/src/pages/RoomsPage.tsx"
+          "frontend/src/components/rooms/CreateDeviceDialog.tsx",
+          "frontend/src/components/rooms/BulkAddDevicesDialog.tsx",
+          "frontend/src/components/rooms/RoomDeviceListSection.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/components/rooms/RoomDashboard.tsx",
-    "frontend/src/components/rooms/RoomTile.tsx",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/rooms/BulkAddDevicesDialog.tsx",
+    "frontend/src/components/rooms/CreateDeviceDialog.tsx",
+    "frontend/src/components/rooms/RoomDeviceListSection.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
     "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/RoomsPage.tsx",
+    "frontend/src/pages/RoomDetailsPage.tsx",
+    "frontend/src/utils/backendAvailability.ts",
     "frontend/src/utils/urlParams.ts",
     "project_state.json",
     "scratch/component-selection.json",

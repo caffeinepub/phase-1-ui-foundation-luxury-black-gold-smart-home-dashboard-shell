@@ -49,6 +49,7 @@ export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     createDevice(deviceId: DeviceId, name: string, roomId: RoomId, isOn: boolean, brightness: number): Promise<void>;
     createRoom(roomId: RoomId, name: string, color: string, isHidden: boolean): Promise<void>;
+    generateNextDeviceId(): Promise<number>;
     getAllDevices(): Promise<Array<[DeviceId, LightDevice]>>;
     getAllRoomSummaries(): Promise<Array<RoomInfo>>;
     getAllRooms(): Promise<Array<RoomInfo>>;

@@ -1,66 +1,81 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Rooms stepper: immediate tile rendering, default Room N naming, and reliable React Query refresh",
+  "title": "Harden Room Details loading and make device adding + refresh reliable",
   "requirements": [
     {
       "id": "REQ-1",
-      "summary": "Render a new RoomTile immediately in the Rooms grid when the room count is incremented, without refresh.",
+      "summary": "Make Room Details resilient to backend failures with clear, actionable recovery UI and no raw error dumps.",
       "acceptanceCriteria": [
-        "On Rooms page, clicking the + button increases the count and a corresponding additional RoomTile renders immediately in the grid.",
-        "The new tile appears without manual reload/navigation and without waiting for a long delay.",
-        "No regression: decreasing the count hides extra tiles accordingly."
+        "When getRoomInfo fails, the Room Details page shows an English error message that distinguishes backend-unavailable/canister-stopped style failures from generic failures (no raw CBOR or request dump shown to the user).",
+        "The error UI provides at least: (a) a 'Try Again' action that re-runs the query, and (b) a 'Back to Rooms' action that always works.",
+        "If the error appears to be a canister-stopped/unavailable scenario (e.g., reject code 5 / IC0508 in the error text), the UI includes concise English guidance (e.g., backend unavailable; try again later/reload) instead of only the raw error message.",
+        "No unhandled exceptions occur in RoomDetailsPage when room is null or query errors."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/RoomsPage.tsx",
-          "operation": "modify",
-          "description": "Update the display-count change flow to immediately reflect the new room count in the rendered grid (including optimistic/derived placeholder tiles when needed), and ensure decrementing the count removes extra tiles from the grid without requiring a refresh."
+          "path": "frontend/src/utils/backendAvailability.ts",
+          "operation": "create",
+          "description": "Add a small helper to sanitize backend errors into user-friendly English messages and to detect canister-stopped/unavailable patterns (e.g., IC0508, reject code 5) without exposing raw request/CBOR dumps."
         },
         {
-          "path": "frontend/src/hooks/useQueries.ts",
+          "path": "frontend/src/pages/RoomDetailsPage.tsx",
           "operation": "modify",
-          "description": "Add/adjust React Query utilities used by RoomsPage to support immediate UI updates when the room count changes (e.g., query cache updates and invalidation/refetch orchestration for the rooms-for-count query)."
+          "description": "Use the new backend error sanitizer to render a safe, clear error state that distinguishes canister-unavailable vs generic failures, keeps the page usable, and always offers both 'Try Again' (refetch) and 'Back to Rooms'. Compose existing shadcn-ui Button/Card primitives already used on the page; verify the component's usage instructions before implementing."
         }
       ]
     },
     {
       "id": "REQ-2",
-      "summary": "Auto-generate default English names for newly shown rooms as \"Room N\" and keep existing rename flow working.",
+      "summary": "Replace client-side timestamp DeviceId generation with backend-allocated IDs for single and bulk device creation, with clear failure handling.",
       "acceptanceCriteria": [
-        "When a new room becomes visible due to increasing the count, its displayed name is auto-generated as \"Room N\" (e.g., \"Room 6\").",
-        "The existing inline edit flow on RoomTile can rename the room and the updated name persists after refresh (stored via backend)."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/rooms/RoomTile.tsx",
-          "operation": "modify",
-          "description": "Ensure the tile display name falls back to an auto-generated default in English using the format \"Room N\" when a newly visible room has no persisted name yet, while preserving the existing inline edit UI and save behavior."
-        },
-        {
-          "path": "frontend/src/pages/RoomsPage.tsx",
-          "operation": "modify",
-          "description": "When increasing the room count, ensure any newly rendered room entries use an auto-generated default name \"Room N\" (based on the room id/number) until the user edits the name via the existing RoomTile editing flow."
-        }
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "summary": "Keep rooms list data in sync with the count by reliably refreshing React Query data on increment/decrement.",
-      "acceptanceCriteria": [
-        "Changing the room count triggers a consistent update of the rooms list (no stale list that ignores the new count).",
-        "If a fetch is needed, the UI transitions cleanly (no permanent loading state; errors still show the existing retry UI)."
+        "Backend: add a new public method that returns a unique DeviceId for the caller (e.g., by scanning existing device IDs for that user and selecting the next available value in the 0–255 range).",
+        "Backend: createDevice continues to work as-is, but the new ID allocation guarantees that repeated adds (including rapid bulk adds) do not collide with existing IDs for that user.",
+        "Frontend: CreateDeviceDialog and BulkAddDevicesDialog no longer use Date.now()%256 (or similar) to pick device IDs; they request IDs from the backend allocator before calling createDevice.",
+        "Bulk add allocates a fresh ID per device creation and successfully creates N devices in one operation without ID collisions.",
+        "If the allocator cannot provide an ID (e.g., user already has 256 devices), the frontend shows a clear English error and does not attempt to call createDevice with a guessed ID."
       ],
       "file_operations": [
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Refine the rooms-for-count query behavior so count changes consistently trigger the correct fetch and/or cache update (avoiding stale results), while preserving existing loading/error states and retry behavior."
+          "description": "Add a React Query mutation/hook that requests a backend-allocated next DeviceId (via the existing backend actor capability generateNextDeviceId) and exposes it for dialogs to call before createDevice."
         },
         {
-          "path": "frontend/src/pages/RoomsPage.tsx",
+          "path": "frontend/src/components/rooms/CreateDeviceDialog.tsx",
           "operation": "modify",
-          "description": "Wire the displayCount change handling to the React Query refresh strategy (invalidate/refetch and/or cache updates) so increment/decrement keeps UI and fetched room data aligned, without introducing long delays or permanent loading states."
+          "description": "Remove timestamp-based DeviceId generation and request a backend-allocated DeviceId before calling createDevice. If allocation fails (e.g., exhausted IDs), show a concise English error and do not call createDevice. Keep dialog behavior consistent (disable while pending, close on success) using existing shadcn-ui Dialog/Button/Input components; verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/rooms/BulkAddDevicesDialog.tsx",
+          "operation": "modify",
+          "description": "Remove timestamp-based DeviceId generation and allocate a fresh backend-provided DeviceId for each device in the bulk loop before calling createDevice. If allocation fails mid-run, stop further creates and show a clear English error (no guessed IDs). Use existing shadcn-ui Dialog/Button/Input/ScrollArea components; verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Refresh the Room Details device list immediately after successful device add (single or bulk) and avoid stuck loading states.",
+      "acceptanceCriteria": [
+        "After a successful add (single or bulk), the RoomDeviceListSection reflects the newly created devices without requiring a manual page refresh (via React Query invalidation/refetch already used by createDevice mutation, or an explicit refetch on dialog close).",
+        "After adding devices, the empty-state 'No Devices Yet' is replaced by the actual device cards for the room.",
+        "The add-device dialogs close on success and leave the Room Details page in a usable state (no stuck loading spinners)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/rooms/CreateDeviceDialog.tsx",
+          "operation": "modify",
+          "description": "Add an optional success callback (e.g., onSuccess) that is invoked after a successful create + dialog close so the parent can immediately refetch room devices, ensuring the list updates without refresh. Use existing shadcn-ui primitives; verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/rooms/BulkAddDevicesDialog.tsx",
+          "operation": "modify",
+          "description": "Add an optional success callback (e.g., onSuccess) that is invoked after all devices are created and the dialog closes, so the parent can immediately refetch room devices and replace the empty state. Use existing shadcn-ui primitives; verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/rooms/RoomDeviceListSection.tsx",
+          "operation": "modify",
+          "description": "Wire dialog success callbacks to refetch the room-scoped devices query (and/or invalidate the ['devices', roomId] query) so newly created device cards appear immediately and the page remains usable. Compose existing shadcn-ui Buttons/Dialogs; verify the component's usage instructions before implementing."
         }
       ]
     }
