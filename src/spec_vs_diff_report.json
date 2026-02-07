@@ -1,58 +1,42 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T20:13:43.823Z",
-  "summary": "REQ-8 is implemented via a new dedicated RoomDetailsPage and App-level navigation to a separate 'room-details' view. REQ-7 is only partially met: the Rooms page uses a displayCount and shows up to N rooms, but when hidden rooms are filtered out it may show fewer than N and does not fill up to N with the next visible rooms. REQ-6 cannot be fully verified from the truncated diff because the RoomsPage header/empty-state portion is not shown and there is no explicit evidence that CreateRoomDialog entry points were removed from the Rooms page.",
+  "generatedAt": "2026-02-07T21:41:23.109Z",
+  "summary": "Frontend changes introduce a new React Query hook keyed by room display count and update RoomsPage/RoomTile to use it, which likely improves refetch behavior when the count changes and provides a fallback display name. However, the diff does not show any backend implementation for auto-generating/persisting default room names, and includes several unrelated UI/feature additions (not requested) in RoomDashboard and URL/session persistence helpers.",
   "missing_requirements": [
     {
-      "id": "REQ-6",
-      "requirement": "Remove the manual \"Add Room\" UI and creation flow from the Rooms page (no Add Room button in header, no create-first-room empty state, and no path triggering CreateRoomDialog from the Rooms page).",
-      "reason": "RoomsPage.tsx is truncated before the header/empty-state UI; the provided snippet does not show removal of an \"Add Room\" button or the empty-state behavior, and does not explicitly show that CreateRoomDialog is no longer reachable from the Rooms page.",
+      "id": "REQ-2",
+      "requirement": "Ensure newly displayed rooms have an auto-generated default name in English using the format \"Room N\" (matching the room number/id), and that the name can be edited later using the existing room editing UI (persisted via backend).",
+      "reason": "RoomTile adds a UI fallback `room.name || `Room ${room.id}``, but the requirement/AC calls for an auto-generated default name stored via backend so it persists after refresh. The diff contains no backend (Motoko) changes or evidence that `getRoomsForCount`/room creation ensures `room.name` is set to \"Room N\" and persisted.",
       "evidence": [
-        "frontend/src/pages/RoomsPage.tsx (truncated)"
-      ]
-    },
-    {
-      "id": "REQ-7",
-      "requirement": "Selecting a room count displays exactly that many room icons/cards (first N by id from pre-created rooms 1–100) with defined behavior regarding hidden rooms (either include hidden in the count with indication, or exclude hidden but fill up to N with next visible rooms).",
-      "reason": "The code filters out hidden rooms when \"Show Hidden\" is off, but it only fetches a range up to displayCount and then slices the filtered list to displayCount. If some of the first rooms in the fetched range are hidden, the filtered list can contain fewer than N rooms, and it does not fetch additional rooms to fill up to N with the next visible ones.",
-      "evidence": [
-        "frontend/src/pages/RoomsPage.tsx"
+        "frontend/src/components/rooms/RoomTile.tsx",
+        "frontend/src/hooks/useQueries.ts"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Added a range-based rooms query hook (useGetRoomSummariesRange) and calls to backend getRoomSummariesRange for subset fetching.",
-      "reason": "The BuildRequest focuses on UI behavior and navigation; it does not request introducing a new range-based fetching API/hook.",
+      "description": "Added device statistics and electricity consumption calculations and expanded loading/error UI in RoomDashboard.",
+      "reason": "The BuildRequest is narrowly about Rooms stepper/count behavior and default room naming; it does not request new dashboard statistics, energy usage calculations, or enhanced device-loading error UI.",
       "evidence": [
-        "frontend/src/hooks/useQueries.ts",
-        "frontend/src/pages/RoomsPage.tsx"
+        "frontend/src/components/rooms/RoomDashboard.tsx"
       ]
     },
     {
-      "description": "Introduced sessionStorage helpers in a URL params utility module (save/load rooms display count and showHidden).",
-      "reason": "State persistence was only mentioned as an acceptance criterion for preserving list state on back navigation; creating a dedicated urlParams/session utility module was not explicitly requested.",
+      "description": "Persisting Rooms display count and hidden-room preference via sessionStorage and adding related URL/session helper functionality.",
+      "reason": "Persistence of display count/showHidden is not requested by REQ-1/2/3; it is extra behavior beyond ensuring immediate tile appearance and reliable refetch on count change.",
       "evidence": [
+        "frontend/src/pages/RoomsPage.tsx",
         "frontend/src/utils/urlParams.ts"
-      ]
-    },
-    {
-      "description": "Extended GlassCard to accept an onClick prop (and adjusted tilt disable behavior).",
-      "reason": "Not explicitly requested; this is an implementation detail added to support clickable cards/navigation.",
-      "evidence": [
-        "frontend/src/components/effects/GlassCard.tsx"
       ]
     }
   ],
-  "confidence": 0.64,
+  "confidence": 0.62,
   "changed_files": [
     "frontend-file-summaries.txt",
-    "frontend/src/App.tsx",
-    "frontend/src/components/effects/GlassCard.tsx",
-    "frontend/src/components/rooms/RoomDevicesCard.tsx",
+    "frontend/src/components/rooms/RoomDashboard.tsx",
+    "frontend/src/components/rooms/RoomTile.tsx",
     "frontend/src/hooks/useQueries.ts",
-    "frontend/src/pages/RoomDetailsPage.tsx",
     "frontend/src/pages/RoomsPage.tsx",
     "frontend/src/utils/urlParams.ts",
     "project_state.json"

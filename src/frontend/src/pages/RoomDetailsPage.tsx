@@ -1,6 +1,5 @@
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { RoomDashboard } from '../components/rooms/RoomDashboard';
 import { useGetRoomInfo } from '../hooks/useQueries';
 import { RoomsListSkeleton } from '../components/rooms/RoomsListSkeleton';
 import { GlassCard } from '../components/effects/GlassCard';
@@ -12,6 +11,9 @@ interface RoomDetailsPageProps {
   onBack: () => void;
 }
 
+/**
+ * Minimal room details page displaying only the room name prominently with back navigation, without device dashboards or controls.
+ */
 export function RoomDetailsPage({ roomId, onBack }: RoomDetailsPageProps) {
   const { data: room, isLoading, error, refetch } = useGetRoomInfo(roomId);
 
@@ -67,8 +69,27 @@ export function RoomDetailsPage({ roomId, onBack }: RoomDetailsPageProps) {
         </Button>
       </div>
 
-      {/* Room Dashboard with all details */}
-      <RoomDashboard room={room} onBack={onBack} />
+      {/* Minimal Room Details */}
+      <GlassCard disableTilt>
+        <CardContent className="py-16">
+          <div className="flex flex-col items-center justify-center text-center space-y-6">
+            <div
+              className="h-24 w-24 rounded-full flex items-center justify-center text-2xl font-bold shadow-gold-glow-sm"
+              style={{ backgroundColor: room.color, color: '#fff' }}
+            >
+              {room.id}
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold text-foreground mb-2">
+                {room.name}
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Room #{room.id}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </GlassCard>
     </div>
   );
 }

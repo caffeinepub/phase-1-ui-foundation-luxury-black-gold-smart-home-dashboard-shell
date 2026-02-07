@@ -68,6 +68,7 @@ export const idlService = IDL.Service({
       [IDL.Vec(IDL.Tuple(DeviceId, LightDevice))],
       ['query'],
     ),
+  'getRoomCount' : IDL.Func([], [IDL.Nat], ['query']),
   'getRoomInfo' : IDL.Func([RoomId], [IDL.Opt(RoomInfo)], ['query']),
   'getRoomSensorStats' : IDL.Func([RoomId], [IDL.Opt(SensorStats)], ['query']),
   'getRoomSummariesRange' : IDL.Func(
@@ -80,6 +81,7 @@ export const idlService = IDL.Service({
       [IDL.Opt(RoomSwitchInfo)],
       ['query'],
     ),
+  'getRoomsForCount' : IDL.Func([IDL.Nat], [IDL.Vec(RoomInfo)], ['query']),
   'getSupportTicket' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(SupportTicket)],
@@ -94,6 +96,7 @@ export const idlService = IDL.Service({
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'setBrightness' : IDL.Func([DeviceId, IDL.Nat8], [IDL.Bool], []),
+  'setRoomCount' : IDL.Func([IDL.Nat], [], []),
   'setRoomHidden' : IDL.Func([RoomId, IDL.Bool], [], []),
   'setRoomRunning' : IDL.Func([RoomId, IDL.Bool], [], []),
   'submitSupportTicket' : IDL.Func([IDL.Text, IDL.Text], [], []),
@@ -166,6 +169,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(IDL.Tuple(DeviceId, LightDevice))],
         ['query'],
       ),
+    'getRoomCount' : IDL.Func([], [IDL.Nat], ['query']),
     'getRoomInfo' : IDL.Func([RoomId], [IDL.Opt(RoomInfo)], ['query']),
     'getRoomSensorStats' : IDL.Func(
         [RoomId],
@@ -182,6 +186,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(RoomSwitchInfo)],
         ['query'],
       ),
+    'getRoomsForCount' : IDL.Func([IDL.Nat], [IDL.Vec(RoomInfo)], ['query']),
     'getSupportTicket' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(SupportTicket)],
@@ -196,6 +201,7 @@ export const idlFactory = ({ IDL }) => {
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'setBrightness' : IDL.Func([DeviceId, IDL.Nat8], [IDL.Bool], []),
+    'setRoomCount' : IDL.Func([IDL.Nat], [], []),
     'setRoomHidden' : IDL.Func([RoomId, IDL.Bool], [], []),
     'setRoomRunning' : IDL.Func([RoomId, IDL.Bool], [], []),
     'submitSupportTicket' : IDL.Func([IDL.Text, IDL.Text], [], []),

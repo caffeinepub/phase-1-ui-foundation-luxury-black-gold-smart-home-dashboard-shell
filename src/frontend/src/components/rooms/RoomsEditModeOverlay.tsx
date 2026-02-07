@@ -4,6 +4,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { ScrollArea } from '../ui/scroll-area';
+import { Badge } from '../ui/badge';
 import { useUpdateRoomSettings } from '../../hooks/useQueries';
 import { useState } from 'react';
 import type { RoomInfo } from '../../backend';
@@ -76,44 +77,49 @@ export function RoomsEditModeOverlay({ rooms, onClose }: RoomsEditModeOverlayPro
               <ScrollArea className="h-[500px] pr-4">
                 <div className="grid gap-3 md:grid-cols-2">
                   {rooms.map((room) => (
-                    <button
+                    <Button
                       key={room.id}
+                      variant="outline"
+                      className="h-auto p-4 justify-start text-left hover:shadow-gold-glow-sm transition-all"
                       onClick={() => handleSelectRoom(room)}
-                      className="flex items-center gap-3 p-4 rounded-lg border border-border bg-card hover:bg-accent hover:border-primary/40 transition-all text-left"
                     >
-                      <div
-                        className="flex h-12 w-12 items-center justify-center rounded-full shrink-0"
-                        style={{ backgroundColor: `${room.color}20` }}
-                      >
+                      <div className="flex items-center gap-3 w-full">
                         <div
-                          className="h-6 w-6 rounded-full"
-                          style={{ backgroundColor: room.color }}
-                        />
+                          className="flex h-10 w-10 items-center justify-center rounded-full flex-shrink-0 relative"
+                          style={{ backgroundColor: `${room.color}20` }}
+                        >
+                          <span className="text-sm font-bold" style={{ color: room.color }}>
+                            {room.id}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold truncate">{room.name}</div>
+                          <div className="text-xs text-muted-foreground">Room #{room.id}</div>
+                        </div>
+                        {room.isHidden && (
+                          <Badge variant="secondary" className="text-xs flex-shrink-0">
+                            Hidden
+                          </Badge>
+                        )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground truncate">{room.name}</p>
-                        <p className="text-sm text-muted-foreground">Room ID: {room.id}</p>
-                      </div>
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </ScrollArea>
             ) : (
               <div className="space-y-6">
-                <div className="flex items-center gap-4 p-4 rounded-lg border border-primary/20 bg-accent/50">
+                <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
                   <div
-                    className="flex h-16 w-16 items-center justify-center rounded-full shrink-0"
+                    className="flex h-12 w-12 items-center justify-center rounded-full relative"
                     style={{ backgroundColor: `${selectedRoom.color}20` }}
                   >
-                    <div
-                      className="h-8 w-8 rounded-full"
-                      style={{ backgroundColor: selectedRoom.color }}
-                    />
+                    <span className="text-lg font-bold" style={{ color: selectedRoom.color }}>
+                      {selectedRoom.id}
+                    </span>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Editing</p>
-                    <p className="text-lg font-semibold text-foreground">{selectedRoom.name}</p>
-                    <p className="text-sm text-muted-foreground">Room ID: {selectedRoom.id}</p>
+                    <div className="font-semibold text-lg">{selectedRoom.name}</div>
+                    <div className="text-sm text-muted-foreground">Room #{selectedRoom.id}</div>
                   </div>
                 </div>
 
@@ -124,12 +130,9 @@ export function RoomsEditModeOverlay({ rooms, onClose }: RoomsEditModeOverlayPro
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     placeholder="Enter new room name"
-                    maxLength={50}
-                    className="text-base"
+                    className="shadow-gold-glow-sm"
+                    autoFocus
                   />
-                  <p className="text-xs text-muted-foreground">
-                    {newName.length}/50 characters
-                  </p>
                 </div>
 
                 <div className="flex gap-3 justify-end">
@@ -142,7 +145,7 @@ export function RoomsEditModeOverlay({ rooms, onClose }: RoomsEditModeOverlayPro
                   </Button>
                   <Button
                     onClick={handleSave}
-                    disabled={!newName.trim() || newName === selectedRoom.name || updateRoom.isPending}
+                    disabled={!newName.trim() || updateRoom.isPending}
                     className="shadow-gold-glow-sm"
                   >
                     {updateRoom.isPending ? 'Saving...' : 'Save Changes'}

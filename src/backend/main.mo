@@ -2,16 +2,10 @@ import Map "mo:core/Map";
 import Nat8 "mo:core/Nat8";
 import Nat "mo:core/Nat";
 import Array "mo:core/Array";
-import Iter "mo:core/Iter";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
-
 import AccessControl "authorization/access-control";
 import MixinAuthorization "authorization/MixinAuthorization";
-
-
-// With clause for data migration
-
 
 actor {
   // Initialize access control state
@@ -85,6 +79,9 @@ actor {
   let supportTickets = Map.empty<Principal, SupportTicket>();
   let initializedUsers = Map.empty<Principal, Bool>();
 
+  // Tracking room count per user
+  let userRoomCounts = Map.empty<Principal, Nat>();
+
   // Auto-provision user role for new authenticated principals
   public shared ({ caller }) func initializeAccess() : async () {
     if (caller.isAnonymous()) {
@@ -122,6 +119,9 @@ actor {
 
     // Initialize empty device map for user
     userDevices.add(user, Map.empty<DeviceId, LightDevice>());
+
+    // Initialize default room count
+    userRoomCounts.add(user, 5);
   };
 
   // Get user's rooms map
@@ -146,6 +146,49 @@ actor {
         newDevices;
       };
     };
+  };
+
+  public shared ({ caller }) func setRoomCount(count : Nat) : async () {
+    _assertUser(caller);
+    if (count > 100) {
+      Runtime.trap("Room count cannot exceed 100");
+    };
+    userRoomCounts.add(caller, count);
+  };
+
+  public query ({ caller }) func getRoomCount() : async Nat {
+    _assertUser(caller);
+    switch (userRoomCounts.get(caller)) {
+      case (?count) { count };
+      case (null) { 5 }; // Default to 5 if not set
+    };
+  };
+
+  public query ({ caller }) func getRoomsForCount(count : Nat) : async [RoomInfo] {
+    _assertUser(caller);
+    if (count == 0 or count > 100) {
+      Runtime.trap("Invalid room count");
+    };
+
+    let rooms = getUserRoomsMap(caller);
+    Array.tabulate<RoomInfo>(
+      count,
+      func(i) {
+        let roomId = Nat8.fromNat((i + 1) : Nat);
+        switch (rooms.get(roomId)) {
+          case (?room) { room };
+          case (null) {
+            {
+              id = roomId;
+              name = "Room " # roomId.toText();
+              color = "white";
+              isHidden = false;
+              isRunning = false;
+            };
+          };
+        };
+      },
+    );
   };
 
   public query ({ caller }) func getAllRoomSummaries() : async [RoomInfo] {

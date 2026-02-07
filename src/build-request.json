@@ -1,71 +1,70 @@
 {
   "kind": "build_request",
-  "title": "Remove manual Add Room flow, show room icons by selected count, and add dedicated Room Details page navigation",
+  "title": "Fix Rooms stepper so new room tiles appear immediately with auto-generated names",
   "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-6",
-      "text": "Remove the manual \"Add Room\" UI and creation flow from the Rooms page so rooms are no longer created via an \"Add Room\" button/dialog. The Rooms page must not render the Add Room button in the header and must not show an empty-state that prompts creating the first room.",
+      "id": "REQ-1",
+      "text": "Fix the Rooms page so that when the user increases the room count using the plus (+) control, a new room tile appears immediately in the main rooms grid (without requiring a page refresh).",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-1"
         ],
         "quotes": [
-          "الغي زر اضافه غرف دي"
+          "المفروض في نفس اللحظه يظهر مربع جديد لاكن هو حاليا مش بيظهر ودا الغلط"
         ]
       },
       "acceptanceCriteria": [
-        "On the Rooms page header, the \"Add Room\" button is not present.",
-        "If the backend returns zero rooms (unexpected), the UI does not present an action to create rooms; it should show a non-creating informational empty state or fallback guidance instead.",
-        "No user path in the UI triggers `CreateRoomDialog` for creating rooms from the Rooms page."
+        "On Rooms page, clicking the + button increases the count and a corresponding additional RoomTile renders immediately in the grid.",
+        "The new tile appears without manual reload/navigation and without waiting for a long delay.",
+        "No regression: decreasing the count hides extra tiles accordingly."
       ]
     },
     {
-      "id": "REQ-7",
-      "text": "Update the Rooms page \"number of rooms\" selector behavior so that selecting a room count displays exactly that many room icons/cards in the grid, derived from the pre-created rooms (IDs 1–100). The displayed rooms must be consistent with the selected count and update immediately when the count changes.",
-      "target": "frontend",
+      "id": "REQ-2",
+      "text": "Ensure newly displayed rooms have an auto-generated default name in English using the format \"Room N\" (matching the room number/id), and that the name can be edited later using the existing room editing UI.",
+      "target": "both",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-1"
         ],
         "quotes": [
-          "ولما احدد عدد الغرف تظهر ايقونات علي حسب العدد"
+          "الاسم يتولد تلقائيا وانا لاحقا هتم تعديلة"
         ]
       },
       "acceptanceCriteria": [
-        "Changing the room count control updates the grid to show exactly N rooms (N = selected count).",
-        "The grid shows the first N room entries (by room id) from the available pre-created rooms.",
-        "If some of the first N rooms are hidden and \"Show Hidden\" is off, the UI behavior is defined and consistent (either: include hidden rooms in the count and visually indicate hidden; or exclude hidden rooms and fill up to N with next visible rooms)."
+        "When a new room becomes visible due to increasing the count, its displayed name is auto-generated as \"Room N\" (e.g., \"Room 6\").",
+        "The existing inline edit flow on RoomTile can rename the room and the updated name persists after refresh (stored via backend)."
       ]
     },
     {
-      "id": "REQ-8",
-      "text": "Implement navigation to a dedicated Room Details screen when the user clicks a room icon/card in the Rooms grid. The Room Details screen must be a separate page-level view (not an inline swap inside the Rooms page) and must show: room details, room statistics, room electricity/consumption section, and the room's devices list/controls (reusing existing Room Dashboard functionality where applicable). Include a Back control to return to the Rooms page.",
+      "id": "REQ-3",
+      "text": "Ensure the React Query room-list data refreshes reliably when the display count changes (increment/decrement), so that the UI state and fetched data stay in sync.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-1"
         ],
         "quotes": [
-          "ولما ادوس علي اي غرفه تحولني لصفحه جديدة فيها تفاصيل الغرفه واحصائياتها واستهلاكها واجهزتها"
+          "لما ازود غرف تظهرلها مربع باسمها"
         ]
       },
       "acceptanceCriteria": [
-        "Clicking a room card/icon from the Rooms grid navigates to a dedicated Room Details screen.",
-        "The Room Details screen displays (at minimum) the room name and status, a statistics section, an electricity/consumption section, and a devices section (list + controls).",
-        "The Back action returns the user to the Rooms page and preserves the previously selected room count (and other relevant list UI state where feasible)."
+        "Changing the room count triggers a consistent update of the rooms list (no stale list that ignores the new count).",
+        "If a fetch is needed, the UI transitions cleanly (no permanent loading state; errors still show the existing retry UI)."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain single-actor (all Motoko logic in backend/main.mo).",
-    "Do not edit files under frontend/immutablePaths (e.g., frontend/src/hooks/useInternetIdentity.ts(x), frontend/src/hooks/useActor.ts, frontend/src/main.tsx, frontend/src/components/ui)."
+    "Do not edit any files under frontend/src/components/ui or any other paths listed as immutable in SYSTEM_CONTEXT.",
+    "Keep all Motoko logic in the single backend actor (backend/main.mo). Generate backend/migration.mo only if state schema changes are required (not expected for this fix).",
+    "Use English for any user-facing UI text introduced or modified by this change."
   ],
   "nonGoals": [
-    "Adding third-party authentication providers (Internet Identity only).",
-    "Adding real-time features (WebSockets/push).",
-    "Introducing external databases or services."
+    "Adding room icons or images inside the room tiles (tiles should remain name-focused as requested).",
+    "Introducing new authentication providers beyond Internet Identity.",
+    "Implementing advanced room details content on the Room Details page beyond the existing minimal view."
   ],
   "imageRequirements": {
     "required": [],

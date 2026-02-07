@@ -138,16 +138,19 @@ export interface backendInterface {
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getDevices(roomId: RoomId): Promise<Array<[DeviceId, LightDevice]>>;
+    getRoomCount(): Promise<bigint>;
     getRoomInfo(roomId: RoomId): Promise<RoomInfo | null>;
     getRoomSensorStats(roomId: RoomId): Promise<SensorStats | null>;
     getRoomSummariesRange(fromIndex: bigint, toIndex: bigint): Promise<Array<RoomInfo>>;
     getRoomSwitchInfo(roomId: RoomId): Promise<RoomSwitchInfo | null>;
+    getRoomsForCount(count: bigint): Promise<Array<RoomInfo>>;
     getSupportTicket(user: Principal): Promise<SupportTicket | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     initializeAccess(): Promise<void>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     setBrightness(deviceId: DeviceId, brightness: number): Promise<boolean>;
+    setRoomCount(count: bigint): Promise<void>;
     setRoomHidden(roomId: RoomId, isHidden: boolean): Promise<void>;
     setRoomRunning(roomId: RoomId, isRunning: boolean): Promise<void>;
     submitSupportTicket(subject: string, description: string): Promise<void>;
@@ -313,6 +316,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getRoomCount(): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getRoomCount();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getRoomCount();
+            return result;
+        }
+    }
     async getRoomInfo(arg0: RoomId): Promise<RoomInfo | null> {
         if (this.processError) {
             try {
@@ -367,6 +384,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getRoomSwitchInfo(arg0);
             return from_candid_opt_n8(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getRoomsForCount(arg0: bigint): Promise<Array<RoomInfo>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getRoomsForCount(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getRoomsForCount(arg0);
+            return result;
         }
     }
     async getSupportTicket(arg0: Principal): Promise<SupportTicket | null> {
@@ -450,6 +481,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.setBrightness(arg0, arg1);
+            return result;
+        }
+    }
+    async setRoomCount(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.setRoomCount(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.setRoomCount(arg0);
             return result;
         }
     }

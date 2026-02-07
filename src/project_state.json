@@ -1,32 +1,37 @@
 {
   "schemaVersion": "1.0.0",
   "projectStateVersion": 3,
-  "summary": "Room management UI: remove manual add-room button, show room icons based on selected room count, and navigate to a room details page with stats (usage/consumption/devices) when a room is selected.",
-  "architectural_notes": [],
-  "known_issues": [],
-  "isFixRequest": false,
+  "summary": "App includes a rooms feature: when a user adds a room, a new room card (name only) should appear immediately in the main rooms list, with the room name auto-generated (e.g., Room 1, Room 2) and editable later.",
+  "architectural_notes": [
+    "Room creation should auto-generate default names sequentially (e.g., Room 1, Room 2) and support later renaming.",
+    "Rooms list UI should update immediately on add (optimistic UI/state update) to show the new room card without requiring reload."
+  ],
+  "known_issues": [
+    "Bug: Adding a room does not show the new room card immediately in the rooms list (expected to appear instantly)."
+  ],
+  "isFixRequest": true,
   "existing_features": [
     {
-      "id": "feature-remove-the-manual-add-room-ui-and-creation-flow-from-the-rooms-page-so-rooms-are-no-longer-created-via-an-add-room-button-dialog-the-rooms-page-must-not-render-the-add-room-button-in-the-header-and-must-not-show-an-empty-state-that-prompts-creating-the-first-room",
-      "title": "Remove the manual \"Add Room\" UI and creation flow from the Rooms page so rooms are no longer created via an \"Add Room\" button/dialog. The Rooms page must not render the Add Room button in the header and must not show an empty-state that prompts creating the first room.",
+      "id": "feature-fix-the-rooms-page-so-that-when-the-user-increases-the-room-count-using-the-plus-control-a-new-room-tile-appears-immediately-in-the-main-rooms-grid-without-requiring-a-page-refresh",
+      "title": "Fix the Rooms page so that when the user increases the room count using the plus (+) control, a new room tile appears immediately in the main rooms grid (without requiring a page refresh).",
       "reqIds": [
-        "REQ-6"
+        "REQ-1"
       ],
       "version": 1
     },
     {
-      "id": "feature-update-the-rooms-page-number-of-rooms-selector-behavior-so-that-selecting-a-room-count-displays-exactly-that-many-room-icons-cards-in-the-grid-derived-from-the-pre-created-rooms-ids-1-100-the-displayed-rooms-must-be-consistent-with-the-selected-count-and-update-immediately-when-the-count-changes",
-      "title": "Update the Rooms page \"number of rooms\" selector behavior so that selecting a room count displays exactly that many room icons/cards in the grid, derived from the pre-created rooms (IDs 1–100). The displayed rooms must be consistent with the selected count and update immediately when the count changes.",
+      "id": "feature-ensure-newly-displayed-rooms-have-an-auto-generated-default-name-in-english-using-the-format-room-n-matching-the-room-number-id-and-that-the-name-can-be-edited-later-using-the-existing-room-editing-ui",
+      "title": "Ensure newly displayed rooms have an auto-generated default name in English using the format \"Room N\" (matching the room number/id), and that the name can be edited later using the existing room editing UI.",
       "reqIds": [
-        "REQ-7"
+        "REQ-2"
       ],
       "version": 1
     },
     {
-      "id": "feature-implement-navigation-to-a-dedicated-room-details-screen-when-the-user-clicks-a-room-icon-card-in-the-rooms-grid-the-room-details-screen-must-be-a-separate-page-level-view-not-an-inline-swap-inside-the-rooms-page-and-must-show-room-details-room-statistics-room-electricity-consumption-section-and-the-room-s-devices-list-controls-reusing-existing-room-dashboard-functionality-where-applicable-include-a-back-control-to-return-to-the-rooms-page",
-      "title": "Implement navigation to a dedicated Room Details screen when the user clicks a room icon/card in the Rooms grid. The Room Details screen must be a separate page-level view (not an inline swap inside the Rooms page) and must show: room details, room statistics, room electricity/consumption section, and the room's devices list/controls (reusing existing Room Dashboard functionality where applicable). Include a Back control to return to the Rooms page.",
+      "id": "feature-ensure-the-react-query-room-list-data-refreshes-reliably-when-the-display-count-changes-increment-decrement-so-that-the-ui-state-and-fetched-data-stay-in-sync",
+      "title": "Ensure the React Query room-list data refreshes reliably when the display count changes (increment/decrement), so that the UI state and fetched data stay in sync.",
       "reqIds": [
-        "REQ-8"
+        "REQ-3"
       ],
       "version": 1
     }
@@ -34,24 +39,12 @@
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Remove the 'Add Room' button; rooms should be determined by selected room count instead of manual adding.",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-2",
-      "summary": "When the user selects the number of rooms, display a corresponding number of room icons/cards in the UI.",
-      "reqIds": [],
-      "status": "pending"
-    },
-    {
-      "id": "AR-3",
-      "summary": "On tapping a room icon/card, navigate to a new Room Details screen showing room details, statistics, consumption, and devices.",
+      "summary": "When adding a room, immediately display a new room card (name only) in the main rooms list; auto-generate the room name (e.g., Room 1, Room 2) with ability to edit later.",
       "reqIds": [],
       "status": "pending"
     }
   ],
-  "projectName": "Remove manual Add Room flow, show room icons by selected count, and add dedicated Room Details page navigation",
+  "projectName": "Fix Rooms stepper so new room tiles appear immediately with auto-generated names",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

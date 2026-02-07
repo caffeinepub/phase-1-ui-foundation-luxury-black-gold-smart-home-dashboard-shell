@@ -16,7 +16,7 @@ interface RoomDevicesCardProps {
 }
 
 /**
- * Clickable room card component that navigates to room details page on click, with settings and device creation controls.
+ * Clickable room card component displaying room number and editable name, navigates to room details page on click with settings and device creation controls.
  */
 export const RoomDevicesCard = memo(function RoomDevicesCard({ room, onOpenRoomDetails, onSelectForSidebar }: RoomDevicesCardProps) {
   const toggleRunning = useToggleRoomRunningState();
@@ -52,14 +52,17 @@ export const RoomDevicesCard = memo(function RoomDevicesCard({ room, onOpenRoomD
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div
-              className="flex h-16 w-16 items-center justify-center rounded-full shadow-gold-glow-sm"
+              className="flex h-16 w-16 items-center justify-center rounded-full shadow-gold-glow-sm relative"
               style={{ backgroundColor: `${room.color}20` }}
             >
               <Home className="h-8 w-8" style={{ color: room.color }} />
+              <div className="absolute -top-1 -right-1 bg-primary text-primary-foreground rounded-full h-6 w-6 flex items-center justify-center text-xs font-bold shadow-gold-glow-sm">
+                {room.id}
+              </div>
             </div>
             <div>
               <CardTitle className="text-xl">{room.name}</CardTitle>
-              <CardDescription>Room ID: {room.id}</CardDescription>
+              <CardDescription>Room #{room.id}</CardDescription>
             </div>
           </div>
           <div className="flex items-center gap-2" onClick={handleSettingsClick}>

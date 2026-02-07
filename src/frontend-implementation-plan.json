@@ -1,78 +1,66 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Rooms page cleanup, count-based room grid, and dedicated Room Details navigation",
+  "title": "Rooms stepper: immediate tile rendering, default Room N naming, and reliable React Query refresh",
   "requirements": [
     {
-      "id": "REQ-6",
-      "summary": "Remove manual Add Room UI/flow from Rooms page header and empty state so users cannot create rooms from Rooms.",
+      "id": "REQ-1",
+      "summary": "Render a new RoomTile immediately in the Rooms grid when the room count is incremented, without refresh.",
       "acceptanceCriteria": [
-        "On the Rooms page header, the \"Add Room\" button is not present.",
-        "If the backend returns zero rooms (unexpected), the UI does not present an action to create rooms; it should show a non-creating informational empty state or fallback guidance instead.",
-        "No user path in the UI triggers `CreateRoomDialog` for creating rooms from the Rooms page."
+        "On Rooms page, clicking the + button increases the count and a corresponding additional RoomTile renders immediately in the grid.",
+        "The new tile appears without manual reload/navigation and without waiting for a long delay.",
+        "No regression: decreasing the count hides extra tiles accordingly."
       ],
       "file_operations": [
         {
           "path": "frontend/src/pages/RoomsPage.tsx",
           "operation": "modify",
-          "description": "Remove `CreateRoomDialog` import and all render paths that show it (header action and empty state). Replace the empty state with an informational message (no create call-to-action) and ensure no UI action on this page can open the manual room creation dialog. Continue using existing shadcn-ui primitives (Button/Card/etc.) for layout consistency; verify the component's usage instructions before implementing."
-        }
-      ]
-    },
-    {
-      "id": "REQ-7",
-      "summary": "Make the Rooms count selector control the grid so it shows exactly N room cards/icons derived from pre-created rooms (IDs 1–100), updating immediately on change.",
-      "acceptanceCriteria": [
-        "Changing the room count control updates the grid to show exactly N rooms (N = selected count).",
-        "The grid shows the first N room entries (by room id) from the available pre-created rooms.",
-        "If some of the first N rooms are hidden and \"Show Hidden\" is off, the UI behavior is defined and consistent (either: include hidden rooms in the count and visually indicate hidden; or exclude hidden rooms and fill up to N with next visible rooms)."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/RoomsPage.tsx",
-          "operation": "modify",
-          "description": "Adjust room fetching and grid derivation so the UI always renders exactly `displayCount` room cards. Fetch the pre-created room set (up to 100) once, then deterministically sort by room id and slice to the first N for display. Define and implement consistent hidden-room behavior: when Show Hidden is OFF, exclude hidden rooms from the displayed set and fill up to N using the next non-hidden rooms by id; when ON, include hidden rooms in the count and show them with their existing Hidden badge. Ensure the grid updates immediately on slider changes (no dependence on refetch timing). Keep using the existing shadcn-ui Slider and related UI elements; verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/utils/urlParams.ts",
-          "operation": "modify",
-          "description": "Add lightweight persistence for the Rooms page selected display count (and any other necessary list UI state) using sessionStorage helpers already present in this module, so the value can be restored after navigating away and back. (No routing changes required here.)"
-        }
-      ]
-    },
-    {
-      "id": "REQ-8",
-      "summary": "Add a dedicated Room Details page-level view and navigate to it when a room card/icon is clicked; include back navigation to Rooms while preserving list state.",
-      "acceptanceCriteria": [
-        "Clicking a room card/icon from the Rooms grid navigates to a dedicated Room Details screen.",
-        "The Room Details screen displays (at minimum) the room name and status, a statistics section, an electricity/consumption section, and a devices section (list + controls).",
-        "The Back action returns the user to the Rooms page and preserves the previously selected room count (and other relevant list UI state where feasible)."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/pages/RoomDetailsPage.tsx",
-          "operation": "create",
-          "description": "Create a dedicated Room Details page-level component that accepts a room id and renders: (1) room details (name + status), and (2) reuses existing `RoomDashboard` to show room statistics, electricity/consumption, and devices list/controls. Include a Back control that returns to the Rooms view via a callback, and ensure it does not reset the Rooms list state (rely on persisted state from session storage). Use shadcn-ui primitives (Button/Card/Badge) for consistent page structure; verify the component's usage instructions before implementing."
+          "description": "Update the display-count change flow to immediately reflect the new room count in the rendered grid (including optimistic/derived placeholder tiles when needed), and ensure decrementing the count removes extra tiles from the grid without requiring a refresh."
         },
         {
           "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Add a React Query hook to fetch a single room's info by id (using the existing backend actor typing) for the Room Details page header/details section. Keep it consistent with existing hook patterns (timeouts where appropriate, enabled guards, and stable query keys)."
-        },
+          "description": "Add/adjust React Query utilities used by RoomsPage to support immediate UI updates when the room count changes (e.g., query cache updates and invalidation/refetch orchestration for the rooms-for-count query)."
+        }
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "summary": "Auto-generate default English names for newly shown rooms as \"Room N\" and keep existing rename flow working.",
+      "acceptanceCriteria": [
+        "When a new room becomes visible due to increasing the count, its displayed name is auto-generated as \"Room N\" (e.g., \"Room 6\").",
+        "The existing inline edit flow on RoomTile can rename the room and the updated name persists after refresh (stored via backend)."
+      ],
+      "file_operations": [
         {
-          "path": "frontend/src/App.tsx",
+          "path": "frontend/src/components/rooms/RoomTile.tsx",
           "operation": "modify",
-          "description": "Introduce an internal navigation state for the dedicated Room Details view (without adding a new sidebar nav item): extend `NavigationView` to include a room-details view, store the selected room id in App state when navigating from Rooms, render `RoomDetailsPage` for that view, and implement Back navigation to return to Rooms. Ensure that leaving/returning preserves Rooms list state (e.g., selected count restored from session)."
+          "description": "Ensure the tile display name falls back to an auto-generated default in English using the format \"Room N\" when a newly visible room has no persisted name yet, while preserving the existing inline edit UI and save behavior."
         },
         {
           "path": "frontend/src/pages/RoomsPage.tsx",
           "operation": "modify",
-          "description": "Remove the inline RoomDashboard swap flow (`activeRoom` state and related back UI) and instead trigger navigation to the dedicated Room Details page when a room is clicked. Update the page component signature to accept an `onOpenRoomDetails(roomId)` callback from App and call it from the grid interactions. Keep the SmartRoomSidebar behavior intact. Continue using existing shadcn-ui components; verify the component's usage instructions before implementing."
+          "description": "When increasing the room count, ensure any newly rendered room entries use an auto-generated default name \"Room N\" (based on the room id/number) until the user edits the name via the existing RoomTile editing flow."
+        }
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "summary": "Keep rooms list data in sync with the count by reliably refreshing React Query data on increment/decrement.",
+      "acceptanceCriteria": [
+        "Changing the room count triggers a consistent update of the rooms list (no stale list that ignores the new count).",
+        "If a fetch is needed, the UI transitions cleanly (no permanent loading state; errors still show the existing retry UI)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/hooks/useQueries.ts",
+          "operation": "modify",
+          "description": "Refine the rooms-for-count query behavior so count changes consistently trigger the correct fetch and/or cache update (avoiding stale results), while preserving existing loading/error states and retry behavior."
         },
         {
-          "path": "frontend/src/components/rooms/RoomDevicesCard.tsx",
+          "path": "frontend/src/pages/RoomsPage.tsx",
           "operation": "modify",
-          "description": "Make the room card/icon itself clickable to open Room Details (not only the small action button). Wire the click to a new callback prop (e.g., `onOpenRoomDetails`) while keeping existing Start/Stop, Settings, and Create Device controls from hijacking navigation (stopPropagation as needed). Update labeling/CTA to reflect navigation to details. Uses existing shadcn-ui components; verify the component's usage instructions before implementing."
+          "description": "Wire the displayCount change handling to the React Query refresh strategy (invalidate/refetch and/or cache updates) so increment/decrement keeps UI and fetched room data aligned, without introducing long delays or permanent loading states."
         }
       ]
     }

@@ -1,11 +1,11 @@
 # Specification
 
 ## Summary
-**Goal:** Simplify the Rooms page by removing manual room creation, make the room grid reflect the selected room count, and add a dedicated Room Details page for room-specific information and controls.
+**Goal:** Make the Rooms stepper update the rooms grid immediately, with sensible default names for newly shown rooms and reliable React Query synchronization.
 
 **Planned changes:**
-- Remove the "Add Room" button and any Rooms-page flows/empty-states that prompt creating rooms; ensure no UI path from the Rooms page triggers the create-room dialog.
-- Update the room count selector so the grid shows exactly N room cards/icons based on the first N pre-created rooms (IDs 1–100), updating immediately when the selection changes (with a defined, consistent behavior when hidden rooms are involved).
-- Add page-level navigation: clicking a room card/icon opens a dedicated Room Details page that shows room details, statistics, electricity/consumption, and the room’s devices/controls (reusing existing room dashboard functionality where applicable), with a Back control returning to Rooms while preserving the selected room count where feasible.
+- Update the Rooms page so increasing/decreasing the room count immediately renders/hides corresponding RoomTile items in the rooms grid without requiring a refresh.
+- When a new room becomes visible, auto-generate its default English name as "Room N" (matching its room number/id) while keeping the existing inline edit flow to rename and persist via the backend.
+- Ensure React Query room-list data stays in sync with room count changes (consistent refetch/invalidation as needed), with clean loading/error behavior and no stale list.
 
-**User-visible outcome:** Users can choose how many rooms to display and see exactly that many room icons; selecting a room opens a full Room Details page with stats, consumption, and device controls, and they can navigate back to the Rooms list without losing their selection.
+**User-visible outcome:** Clicking + on the Rooms page instantly shows a new room tile named like "Room 6" (editable later), and clicking − hides extra rooms, with no refresh needed.

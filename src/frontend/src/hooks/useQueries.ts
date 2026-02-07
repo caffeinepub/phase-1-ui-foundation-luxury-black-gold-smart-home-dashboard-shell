@@ -39,6 +39,39 @@ export function useSaveCallerUserProfile() {
   });
 }
 
+// Room Queries - Get exactly N rooms by count
+export function useGetRoomsForCount(count: number, options?: { enabled?: boolean }) {
+  const { actor, isFetching } = useActor();
+
+  return useQuery<RoomInfo[]>({
+    queryKey: ['roomsForCount', count],
+    queryFn: async () => {
+      if (!actor) {
+        throw new Error('Unable to connect to backend. Please check your connection.');
+      }
+      try {
+        const result = await withTimeout(
+          actor.getRoomsForCount(BigInt(count)),
+          15000,
+          'Loading rooms is taking longer than expected. Please try again.'
+        );
+        if (!Array.isArray(result)) {
+          console.error('Invalid rooms response:', result);
+          return [];
+        }
+        return result;
+      } catch (error) {
+        console.error('Error fetching rooms for count:', error);
+        throw error;
+      }
+    },
+    enabled: options?.enabled !== false && !!actor && !isFetching && count > 0,
+    staleTime: 0, // Always refetch when count changes
+    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
+    retry: 2,
+  });
+}
+
 // Room Queries - Range-based for efficient subset fetching
 export function useGetRoomSummariesRange(fromIndex: number, toIndex: number, options?: { enabled?: boolean }) {
   const { actor, isFetching } = useActor();
@@ -145,6 +178,7 @@ export function useCreateRoom() {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
       queryClient.invalidateQueries({ queryKey: ['roomSummaries'] });
       queryClient.invalidateQueries({ queryKey: ['roomInfo'] });
+      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
     },
   });
 }
@@ -162,6 +196,7 @@ export function useToggleRoomRunningState() {
       queryClient.invalidateQueries({ queryKey: ['roomSummaries'] });
       queryClient.invalidateQueries({ queryKey: ['roomInfo'] });
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
     },
   });
 }
@@ -179,6 +214,7 @@ export function useUpdateRoomSettings() {
       queryClient.invalidateQueries({ queryKey: ['roomSummaries'] });
       queryClient.invalidateQueries({ queryKey: ['roomInfo'] });
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
     },
   });
 }
@@ -196,6 +232,7 @@ export function useSetRoomHidden() {
       queryClient.invalidateQueries({ queryKey: ['roomSummaries'] });
       queryClient.invalidateQueries({ queryKey: ['roomInfo'] });
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
     },
   });
 }
@@ -275,7 +312,8 @@ export function useToggleDevice() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
       queryClient.invalidateQueries({ queryKey: ['roomSwitchInfo'] });
-      queryClient.invalidateQueries({ queryKey: ['roomElectricityConsumption'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
     },
   });
 }
@@ -319,6 +357,8 @@ export function useCreateDevice() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
       queryClient.invalidateQueries({ queryKey: ['roomSwitchInfo'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
     },
   });
 }
@@ -335,7 +375,8 @@ export function useToggleAllDevicesInRoom() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['devices'] });
       queryClient.invalidateQueries({ queryKey: ['roomSwitchInfo'] });
-      queryClient.invalidateQueries({ queryKey: ['roomElectricityConsumption'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['roomsForCount'] });
     },
   });
 }
@@ -352,7 +393,7 @@ export function useGetRoomSwitchInfo(roomId: RoomId) {
       try {
         const result = await withTimeout(
           actor.getRoomSwitchInfo(roomId),
-          8000,
+          10000,
           'Loading room switch info is taking longer than expected. Please try again.'
         );
         return result;
@@ -367,49 +408,17 @@ export function useGetRoomSwitchInfo(roomId: RoomId) {
   });
 }
 
-export function useGetRoomElectricityConsumption(roomId: RoomId) {
-  const { actor, isFetching } = useActor();
-
-  return useQuery<number>({
-    queryKey: ['roomElectricityConsumption', roomId],
-    queryFn: async () => {
-      if (!actor) {
-        throw new Error('Unable to connect to backend. Please check your connection.');
-      }
-      try {
-        const devices = await withTimeout(
-          actor.getDevices(roomId),
-          8000,
-          'Loading electricity consumption is taking longer than expected. Please try again.'
-        );
-        
-        if (!Array.isArray(devices)) {
-          console.error('Invalid devices response for consumption:', devices);
-          return 0;
-        }
-
-        const activeDevices = devices.filter(([, device]) => device.isOn);
-        const consumption = activeDevices.length * 0.1;
-        return Math.round(consumption * 10) / 10;
-      } catch (error) {
-        console.error('Error calculating electricity consumption:', error);
-        throw error;
-      }
-    },
-    enabled: !!actor && !isFetching,
-    staleTime: 5000,
-    retry: 2,
-  });
-}
-
-// Support Ticket Mutations
 export function useSubmitSupportTicket() {
   const { actor } = useActor();
+  const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ subject, description }: { subject: string; description: string }) => {
       if (!actor) throw new Error('Actor not available');
       return actor.submitSupportTicket(subject, description);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['supportTicket'] });
     },
   });
 }

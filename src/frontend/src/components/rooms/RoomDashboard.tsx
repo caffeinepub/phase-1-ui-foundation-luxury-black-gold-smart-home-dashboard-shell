@@ -10,7 +10,6 @@ import {
   useToggleDevice,
   useSetBrightness,
   useToggleAllDevicesInRoom,
-  useGetRoomElectricityConsumption,
 } from '../../hooks/useQueries';
 import { BulkAddDevicesDialog } from './BulkAddDevicesDialog';
 import type { RoomInfo, DeviceId } from '../../backend';
@@ -23,7 +22,6 @@ interface RoomDashboardProps {
 
 export function RoomDashboard({ room }: RoomDashboardProps) {
   const { data: devices = [], isLoading: devicesLoading, error: devicesError, refetch: refetchDevices } = useGetDevicesByRoom(room.id);
-  const { data: electricityConsumption, isLoading: consumptionLoading } = useGetRoomElectricityConsumption(room.id);
   const toggleDevice = useToggleDevice();
   const setBrightness = useSetBrightness();
   const toggleAllDevices = useToggleAllDevicesInRoom();
@@ -39,6 +37,13 @@ export function RoomDashboard({ room }: RoomDashboardProps) {
     const devicesOn = devices.filter(([, device]) => device.isOn).length;
     const devicesOff = total - devicesOn;
     return { total, devicesOn, devicesOff };
+  }, [devices]);
+
+  // Calculate electricity consumption based on active devices
+  const electricityConsumption = useMemo(() => {
+    // Simple calculation: each active device consumes ~0.1 kWh
+    const activeDevices = devices.filter(([, device]) => device.isOn).length;
+    return (activeDevices * 0.1).toFixed(1);
   }, [devices]);
 
   const handleToggleDevice = async (deviceId: DeviceId) => {
@@ -174,16 +179,12 @@ export function RoomDashboard({ room }: RoomDashboardProps) {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center p-8 rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20">
-            {consumptionLoading ? (
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            ) : (
-              <div className="text-center">
-                <p className="text-5xl font-bold text-primary">
-                  {electricityConsumption ?? 0}
-                </p>
-                <p className="text-lg text-muted-foreground mt-2">kWh</p>
-              </div>
-            )}
+            <div className="text-center">
+              <p className="text-5xl font-bold text-primary">
+                {electricityConsumption}
+              </p>
+              <p className="text-lg text-muted-foreground mt-2">kWh</p>
+            </div>
           </div>
         </CardContent>
       </GlassCard>

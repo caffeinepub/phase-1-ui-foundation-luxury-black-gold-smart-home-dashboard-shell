@@ -1,16 +1,15 @@
-import { DoorOpen, Eye, EyeOff, Edit } from 'lucide-react';
+import { DoorOpen, Eye, EyeOff } from 'lucide-react';
 import { GlassCard } from '../components/effects/GlassCard';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Slider } from '../components/ui/slider';
-import { useGetRoomSummariesRange } from '../hooks/useQueries';
+import { RoomCountStepper } from '../components/rooms/RoomCountStepper';
+import { RoomTile } from '../components/rooms/RoomTile';
+import { useGetRoomsForCount } from '../hooks/useQueries';
 import { useAutoProvisionUser } from '../hooks/useAutoProvisionUser';
-import { RoomDevicesCard } from '../components/rooms/RoomDevicesCard';
-import { SmartRoomSidebar } from '../components/virtual-home/SmartRoomSidebar';
 import { RoomsListSkeleton } from '../components/rooms/RoomsListSkeleton';
 import { ProvisioningStateCard } from '../components/security/ProvisioningStateCard';
-import { RoomsEditModeOverlay } from '../components/rooms/RoomsEditModeOverlay';
 import { useMemo, useState, useCallback, useEffect } from 'react';
+import { getStoredRoomsDisplayCount, setStoredRoomsDisplayCount, getStoredShowHiddenRooms, setStoredShowHiddenRooms } from '../utils/urlParams';
 import type { RoomInfo, RoomId } from '../backend';
 
 interface RoomsPageProps {
@@ -20,66 +19,54 @@ interface RoomsPageProps {
 export function RoomsPage({ onOpenRoomDetails }: RoomsPageProps) {
   const provisioningState = useAutoProvisionUser();
   
-  // Restore display count from sessionStorage or default to 25
-  const [displayCount, setDisplayCount] = useState(() => {
-    const stored = sessionStorage.getItem('rooms-display-count');
-    return stored ? parseInt(stored, 10) : 25;
-  });
+  // Restore display count from sessionStorage or default to 5
+  const [displayCount, setDisplayCount] = useState(() => getStoredRoomsDisplayCount());
   
-  const [selectedRoomForSidebar, setSelectedRoomForSidebar] = useState<RoomInfo | null>(null);
-  const [showHidden, setShowHidden] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [showHidden, setShowHidden] = useState(() => getStoredShowHiddenRooms());
 
   // Persist display count to sessionStorage
   useEffect(() => {
-    sessionStorage.setItem('rooms-display-count', displayCount.toString());
+    setStoredRoomsDisplayCount(displayCount);
   }, [displayCount]);
 
-  // Fetch rooms from backend (1 to displayCount)
-  const { data: allRooms = [], isLoading: roomsLoading, error: roomsError, refetch } = useGetRoomSummariesRange(
-    0,
+  // Persist show hidden preference to sessionStorage
+  useEffect(() => {
+    setStoredShowHiddenRooms(showHidden);
+  }, [showHidden]);
+
+  // Fetch exactly N rooms (IDs 1 to displayCount) from backend
+  const { data: allRooms = [], isLoading: roomsLoading, error: roomsError, refetch, isFetching } = useGetRoomsForCount(
     displayCount,
     {
       enabled: provisioningState.isSuccess,
     }
   );
 
-  // Filter and slice rooms based on visibility and display count
+  // Filter rooms based on visibility setting
   const displayedRooms = useMemo(() => {
-    if (!allRooms) return [];
+    if (!allRooms || allRooms.length === 0) return [];
     
     // Sort by room id to ensure consistent ordering
     const sorted = [...allRooms].sort((a, b) => a.id - b.id);
     
-    // Filter based on showHidden setting
-    let filtered = sorted;
-    if (!showHidden) {
-      filtered = sorted.filter((room) => !room.isHidden);
-    }
-    
-    // Take exactly displayCount rooms
-    return filtered.slice(0, displayCount);
-  }, [allRooms, showHidden, displayCount]);
+    return sorted;
+  }, [allRooms]);
+
+  // Filter for visible rooms only (for the hidden count badge)
+  const visibleRooms = useMemo(() => {
+    return displayedRooms.filter((room) => !room.isHidden);
+  }, [displayedRooms]);
 
   const hiddenRoomsCount = useMemo(() => {
-    if (!allRooms) return 0;
-    return allRooms.filter((room) => room.isHidden).length;
-  }, [allRooms]);
+    return displayedRooms.length - visibleRooms.length;
+  }, [displayedRooms, visibleRooms]);
 
   const hasRooms = displayedRooms.length > 0;
 
   // Stable callbacks to prevent unnecessary re-renders
-  const handleOpenRoomDetails = useCallback((room: RoomInfo) => {
-    onOpenRoomDetails(room.id);
+  const handleOpenRoomDetails = useCallback((roomId: RoomId) => {
+    onOpenRoomDetails(roomId);
   }, [onOpenRoomDetails]);
-
-  const handleSelectRoomForSidebar = useCallback((room: RoomInfo) => {
-    setSelectedRoomForSidebar(room);
-  }, []);
-
-  const handleCloseSidebar = useCallback(() => {
-    setSelectedRoomForSidebar(null);
-  }, []);
 
   const handleToggleHidden = useCallback(() => {
     setShowHidden((prev) => !prev);
@@ -89,16 +76,8 @@ export function RoomsPage({ onOpenRoomDetails }: RoomsPageProps) {
     provisioningState.retry();
   }, [provisioningState]);
 
-  const handleDisplayCountChange = useCallback((value: number[]) => {
-    setDisplayCount(value[0]);
-  }, []);
-
-  const handleToggleEditMode = useCallback(() => {
-    setIsEditMode((prev) => !prev);
-  }, []);
-
-  const handleCloseEditMode = useCallback(() => {
-    setIsEditMode(false);
+  const handleDisplayCountChange = useCallback((value: number) => {
+    setDisplayCount(value);
   }, []);
 
   // Loading state during provisioning or rooms fetch
@@ -161,126 +140,97 @@ export function RoomsPage({ onOpenRoomDetails }: RoomsPageProps) {
     );
   }
 
+  // Determine which rooms to show based on showHidden filter
+  const roomsToDisplay = showHidden ? displayedRooms : visibleRooms;
+
   return (
-    <>
-      <div className="space-y-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight text-foreground">Rooms</h2>
-            <p className="mt-2 text-muted-foreground">
-              Organize your smart home by rooms and spaces
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {hiddenRoomsCount > 0 && (
-              <Button
-                variant="outline"
-                onClick={handleToggleHidden}
-                className="gap-2"
-              >
-                {showHidden ? (
-                  <>
-                    <EyeOff className="h-4 w-4" />
-                    Hide Hidden Rooms
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-4 w-4" />
-                    Show Hidden Rooms ({hiddenRoomsCount})
-                  </>
-                )}
-              </Button>
-            )}
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">Rooms</h2>
+          <p className="mt-2 text-muted-foreground">
+            Organize your smart home by rooms and spaces
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {hiddenRoomsCount > 0 && (
             <Button
               variant="outline"
-              onClick={handleToggleEditMode}
-              className="gap-2 shadow-gold-glow-sm"
+              onClick={handleToggleHidden}
+              className="gap-2"
             >
-              <Edit className="h-4 w-4" />
-              Edit Room Names
+              {showHidden ? (
+                <>
+                  <EyeOff className="h-4 w-4" />
+                  Hide Hidden Rooms
+                </>
+              ) : (
+                <>
+                  <Eye className="h-4 w-4" />
+                  Show Hidden Rooms ({hiddenRoomsCount})
+                </>
+              )}
             </Button>
-          </div>
+          )}
         </div>
+      </div>
 
-        {/* Display Count Selector with Slider */}
+      {/* Display Count Selector with Stepper */}
+      <GlassCard disableTilt>
+        <CardHeader>
+          <CardTitle className="text-lg">Display Settings</CardTitle>
+          <CardDescription>Choose how many rooms to display (1-100)</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-foreground">Number of Rooms:</span>
+            <RoomCountStepper
+              value={displayCount}
+              onChange={handleDisplayCountChange}
+              min={1}
+              max={100}
+            />
+          </div>
+        </CardContent>
+      </GlassCard>
+
+      {/* Loading indicator when fetching new count */}
+      {isFetching && !roomsLoading && (
+        <div className="text-center py-4">
+          <p className="text-sm text-muted-foreground">Loading rooms...</p>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!hasRooms && !isFetching && (
         <GlassCard disableTilt>
-          <CardHeader>
-            <CardTitle className="text-lg">Display Settings</CardTitle>
-            <CardDescription>Choose how many rooms to display (1-100)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-foreground">Number of Rooms:</span>
-                <span className="text-2xl font-bold text-primary">{displayCount}</span>
-              </div>
-              <Slider
-                min={1}
-                max={100}
-                step={1}
-                value={[displayCount]}
-                onValueChange={handleDisplayCountChange}
-                className="w-full"
-              />
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>1</span>
-                <span>25</span>
-                <span>50</span>
-                <span>75</span>
-                <span>100</span>
+          <CardContent className="py-12">
+            <div className="flex flex-col items-center justify-center text-center space-y-4">
+              <DoorOpen className="h-16 w-16 text-muted-foreground" />
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">No Rooms Available</h3>
+                <p className="mt-2 text-sm text-muted-foreground max-w-md">
+                  Adjust the display count or visibility settings to see your rooms.
+                </p>
               </div>
             </div>
           </CardContent>
         </GlassCard>
-
-        {/* Empty State */}
-        {!hasRooms && (
-          <GlassCard disableTilt>
-            <CardContent className="py-12">
-              <div className="flex flex-col items-center justify-center text-center space-y-4">
-                <DoorOpen className="h-16 w-16 text-muted-foreground" />
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">No Rooms Available</h3>
-                  <p className="mt-2 text-sm text-muted-foreground max-w-md">
-                    Adjust the display count or visibility settings to see your rooms.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </GlassCard>
-        )}
-
-        {/* Rooms Grid */}
-        {hasRooms && (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {displayedRooms.map((room) => (
-              <RoomDevicesCard
-                key={room.id}
-                room={room}
-                onOpenRoomDetails={handleOpenRoomDetails}
-                onSelectForSidebar={handleSelectRoomForSidebar}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Smart Room Sidebar */}
-        {selectedRoomForSidebar && (
-          <SmartRoomSidebar
-            roomId={selectedRoomForSidebar.id}
-            onClose={handleCloseSidebar}
-          />
-        )}
-      </div>
-
-      {/* Edit Mode Overlay */}
-      {isEditMode && (
-        <RoomsEditModeOverlay
-          rooms={displayedRooms}
-          onClose={handleCloseEditMode}
-        />
       )}
-    </>
+
+      {/* Rooms Grid */}
+      {hasRooms && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {roomsToDisplay.map((room) => (
+            <RoomTile
+              key={room.id}
+              room={room}
+              onClick={() => handleOpenRoomDetails(room.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
